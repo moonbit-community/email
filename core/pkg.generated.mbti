@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/email/core"
+package "nexacodes/email/core"
 
 import {
   "moonbitlang/core/debug",
@@ -10,13 +10,20 @@ import {
 // Errors
 
 // Types and methods
+pub enum AttachmentSource {
+  InMemory(Array[Byte])
+  FilePath(String)
+} derive(Eq, @debug.Debug)
+pub fn AttachmentSource::file_path(String) -> Self
+pub fn AttachmentSource::in_memory(Array[Byte]) -> Self
+
 pub struct BinaryBody {
   content_type : ContentType
   disposition : ContentDisposition
   transfer_encoding : TransferEncoding
   filename : String?
   content_id : ContentId?
-  data : Array[Byte]
+  source : AttachmentSource
 } derive(Eq, @debug.Debug)
 
 pub enum Body {
@@ -26,27 +33,37 @@ pub enum Body {
 } derive(Eq, @debug.Debug)
 pub fn Body::alternative(Array[Self]) -> Result[Self, ValidationError]
 pub fn Body::attachment(String, Array[Byte]) -> Result[Self, ValidationError]
+pub fn Body::attachment_file(String, String, content_type? : ContentType) -> Result[Self, ValidationError]
+pub fn Body::binary(ContentType, ContentDisposition, TransferEncoding, String?, ContentId?, AttachmentSource) -> Result[Self, ValidationError]
 pub fn Body::html(String) -> Self
 pub fn Body::inline_asset(String, String, ContentType, Array[Byte]) -> Result[Self, ValidationError]
+pub fn Body::inline_asset_file(String, String, String, ContentType) -> Result[Self, ValidationError]
 pub fn Body::mixed(Array[Self]) -> Result[Self, ValidationError]
+pub fn Body::multipart(MultipartKind, Array[Self]) -> Result[Self, ValidationError]
 pub fn Body::plain_text(String) -> Self
 pub fn Body::related(Array[Self]) -> Result[Self, ValidationError]
+pub fn Body::text(ContentType, Charset, TransferEncoding, String) -> Self
 
 pub enum Charset {
   Utf8
   UsAscii
   Other(String)
 } derive(Eq, @debug.Debug)
+pub fn Charset::other(String) -> Self
+pub fn Charset::us_ascii() -> Self
+pub fn Charset::utf8() -> Self
 
 pub struct ContentDisposition {
   kind : DispositionKind
   filename : String?
   parameters : Array[HeaderParam]
 } derive(Eq, @debug.Debug)
+pub fn ContentDisposition::new(DispositionKind, filename? : String, parameters? : Array[HeaderParam]) -> Result[Self, ValidationError]
 
 pub struct ContentId {
   value : String
 } derive(Eq, @debug.Debug)
+pub fn ContentId::new(String) -> Result[Self, ValidationError]
 
 pub struct ContentType {
   top_level : String
@@ -63,6 +80,9 @@ pub enum DispositionKind {
   Attachment
   Other(String)
 } derive(Eq, @debug.Debug)
+pub fn DispositionKind::attachment() -> Self
+pub fn DispositionKind::inline() -> Self
+pub fn DispositionKind::other(String) -> Self
 
 pub struct Envelope {
   mail_from : Mailbox
@@ -81,6 +101,7 @@ pub struct HeaderParam {
   name : String
   value : String
 } derive(Eq, @debug.Debug)
+pub fn HeaderParam::new(String, String) -> Self
 
 pub struct Mailbox {
   display_name : String?
@@ -107,6 +128,10 @@ pub enum MultipartKind {
   Related
   Custom(String)
 } derive(Eq, @debug.Debug)
+pub fn MultipartKind::alternative() -> Self
+pub fn MultipartKind::custom(String) -> Self
+pub fn MultipartKind::mixed() -> Self
+pub fn MultipartKind::related() -> Self
 
 pub struct TextBody {
   content_type : ContentType
@@ -122,6 +147,11 @@ pub enum TransferEncoding {
   Base64
   Binary
 } derive(Eq, @debug.Debug)
+pub fn TransferEncoding::base64() -> Self
+pub fn TransferEncoding::binary() -> Self
+pub fn TransferEncoding::eight_bit() -> Self
+pub fn TransferEncoding::quoted_printable() -> Self
+pub fn TransferEncoding::seven_bit() -> Self
 
 pub(all) enum ValidationError {
   EmptyAddress

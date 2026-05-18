@@ -1,13 +1,109 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/email"
+package "nexacodes/email"
+
+import {
+  "nexacodes/email/codec",
+  "nexacodes/email/core",
+  "nexacodes/email/transport",
+}
 
 // Values
+pub fn compose_html(@core.Mailbox, Array[@core.Mailbox], String, String, cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header]) -> Result[@core.Message, @core.ValidationError]
+
+pub fn compose_message(@core.Mailbox, Array[@core.Mailbox], String, @core.Body, cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header]) -> Result[@core.Message, @core.ValidationError]
+
+pub fn compose_mixed(@core.Mailbox, Array[@core.Mailbox], String, Array[@core.Body], cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header]) -> Result[@core.Message, @core.ValidationError]
+
+pub fn compose_plain_text(@core.Mailbox, Array[@core.Mailbox], String, String, cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header]) -> Result[@core.Message, @core.ValidationError]
+
+pub fn envelope_for(@core.Message, mail_from? : @core.Mailbox) -> Result[@core.Envelope, @core.ValidationError]
+
+pub fn infer_content_type(String) -> @core.ContentType
+
+pub fn parse_rfc5322(String, mode? : @codec.MimeMode) -> @core.Message raise @codec.ParseError
+
+pub async fn render_to_rfc5322(@core.Message, mode? : @codec.MimeMode) -> String
+
+pub fn to_rfc5322(@core.Message) -> String
 
 // Errors
 
 // Types and methods
 
 // Type aliases
+pub using @core {type AttachmentSource}
+
+pub using @core {type BinaryBody}
+
+pub using @core {type Body}
+
+pub using @core {type Charset}
+
+pub using @core {type ContentDisposition}
+
+pub using @core {type ContentId}
+
+pub using @core {type ContentType}
+
+pub using @transport {type DeliveryOutcome}
+
+pub using @transport {type DeliveryRecord}
+
+pub using @core {type DispositionKind}
+
+pub using @core {type Envelope}
+
+pub using @transport {type FailureClass}
+
+pub using @transport {type FakeTransport}
+
+pub using @transport {type FileArtifact}
+
+pub using @transport {type FileTransport}
+
+pub using @core {type Header}
+
+pub using @core {type HeaderParam}
+
+pub using @core {type Mailbox}
+
+pub using @core {type Message}
+
+pub using @codec {type MimeMode}
+
+pub using @core {type MultipartKind}
+
+pub using @transport {type SmtpAuth}
+
+pub using @transport {type SmtpAuthMechanism}
+
+pub using @transport {type SmtpCapabilities}
+
+pub using @transport {type SmtpClientError}
+
+pub using @transport {type SmtpConfig}
+
+pub using @transport {type SmtpPhase}
+
+pub using @transport {type SmtpRetryPolicy}
+
+pub using @transport {type SmtpSecurity}
+
+pub using @transport {type SmtpTimeouts}
+
+pub using @transport {type SmtpTlsTrust}
+
+pub using @transport {type SmtpTransport}
+
+pub using @transport {type StubSmtpTransport}
+
+pub using @core {type TextBody}
+
+pub using @core {type TransferEncoding}
+
+pub using @transport {type TransportError}
+
+pub using @core {type ValidationError}
 
 // Traits
 

@@ -1,4 +1,4 @@
-# username/email
+# nexacodes/email
 
 MoonBit email library workspace.
 

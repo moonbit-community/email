@@ -65,3 +65,22 @@ test "reject invalid multipart nesting shapes" {
     AlternativeRequiresTextParts,
   )
 }
+
+///|
+test "share binary body construction across in-memory and file-backed helpers" {
+  let memory_attachment = must_ok(Body::attachment("report.bin", [b'B']))
+  let file_attachment = must_ok(
+    Body::attachment_file("report.bin", "/tmp/report.bin"),
+  )
+  match (memory_attachment, file_attachment) {
+    (Binary(memory), Binary(file)) => {
+      assert_true(memory.filename == file.filename)
+      assert_true(memory.disposition == file.disposition)
+      match file.source {
+        FilePath(path) => assert_true(path == "/tmp/report.bin")
+        _ => abort("expected file-backed attachment")
+      }
+    }
+    _ => abort("expected binary attachments")
+  }
+}

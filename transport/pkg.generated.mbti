@@ -1,11 +1,191 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/email/transport"
+package "nexacodes/email/transport"
+
+import {
+  "moonbitlang/core/debug",
+  "nexacodes/email/core",
+}
 
 // Values
 
 // Errors
+pub suberror SmtpClientError {
+  TransportClosed
+  BusyTransport
+  Timeout(SmtpPhase, Int)
+  ConnectionFailure(SmtpPhase, String)
+  InvalidResponse(String)
+  UnexpectedStatus(Int, Int, String)
+  ServiceRejected(SmtpPhase, Int, String, FailureClass)
+  MissingExtension(String)
+  MissingAuthMechanism(SmtpAuthMechanism)
+  AuthFailed(String)
+  ProtocolError(String)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct DeliveryOutcome {
+  accepted : Array[@core.Mailbox]
+  rejected : Array[@core.Mailbox]
+  unsent : Array[@core.Mailbox]
+  response : String
+  failure_class : FailureClass?
+} derive(Eq, @debug.Debug)
+pub fn DeliveryOutcome::all_accepted(Array[@core.Mailbox], response? : String) -> Self
+pub fn DeliveryOutcome::partial(Array[@core.Mailbox], Array[@core.Mailbox], Array[@core.Mailbox], String) -> Self
+
+pub struct DeliveryRecord {
+  envelope : @core.Envelope
+  encoded_message : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FailureClass {
+  Transient
+  Permanent
+} derive(Eq, @debug.Debug)
+
+pub struct FakeTransport {
+  records : Array[DeliveryRecord]
+  mut closed : Bool
+} derive(@debug.Debug)
+pub fn FakeTransport::close(Self) -> Unit
+pub fn FakeTransport::new() -> Self
+pub fn FakeTransport::records(Self) -> Array[DeliveryRecord]
+pub fn FakeTransport::send(Self, @core.Envelope, String) -> Result[DeliveryOutcome, TransportError]
+pub fn FakeTransport::send_message(Self, @core.Envelope, @core.Message) -> Result[DeliveryOutcome, TransportError]
+
+pub struct FileArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+
+pub struct FileTransport {
+  root_dir : String
+  artifacts : Array[FileArtifact]
+  mut next_index : Int
+  mut closed : Bool
+} derive(@debug.Debug)
+pub fn FileTransport::artifacts(Self) -> Array[FileArtifact]
+pub fn FileTransport::close(Self) -> Unit
+pub fn FileTransport::new(String) -> Self
+pub async fn FileTransport::send(Self, @core.Envelope, String) -> Result[DeliveryOutcome, TransportError]
+pub async fn FileTransport::send_message(Self, @core.Envelope, @core.Message) -> Result[DeliveryOutcome, TransportError]
+
+pub struct SmtpAttempt {
+  envelope : @core.Envelope
+  encoded_message : String
+  connection_id : Int
+  trace : Array[String]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum SmtpAuth {
+  None
+  Plain(String, String)
+  Login(String, String)
+  Xoauth2(String, String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum SmtpAuthMechanism {
+  Plain
+  Login
+  Xoauth2
+} derive(Eq, @debug.Debug)
+
+pub struct SmtpCapabilities {
+  raw_lines : Array[String]
+  auth_mechanisms : Array[SmtpAuthMechanism]
+  supports_starttls : Bool
+  supports_pipelining : Bool
+  supports_8bitmime : Bool
+  max_message_size : Int?
+} derive(Eq, @debug.Debug)
+pub fn SmtpCapabilities::supports_auth(Self, SmtpAuthMechanism) -> Bool
+
+pub struct SmtpConfig {
+  host : String
+  port : Int
+  hello_name : String
+  security : SmtpSecurity
+  auth : SmtpAuth
+  tls_trust : SmtpTlsTrust
+  timeouts : SmtpTimeouts
+  retry_policy : SmtpRetryPolicy
+  reuse_connection : Bool
+} derive(Eq, @debug.Debug)
+pub fn SmtpConfig::new(String, Int, hello_name? : String, security? : SmtpSecurity, auth? : SmtpAuth, tls_trust? : SmtpTlsTrust, timeouts? : SmtpTimeouts, retry_policy? : SmtpRetryPolicy, reuse_connection? : Bool) -> Self
+
+pub(all) enum SmtpPhase {
+  Connect
+  Greet
+  Hello
+  StartTls
+  TlsHandshake
+  Auth
+  MailFrom
+  RcptTo
+  DataCommand
+  MessageBody
+  FinalResponse
+  Quit
+} derive(Eq, @debug.Debug)
+
+pub struct SmtpRetryPolicy {
+  max_retries : Int
+  retry_delay_ms : Int
+  retry_on_connection_failure : Bool
+  retry_on_timeout : Bool
+  retry_on_transient_failure : Bool
+} derive(Eq, @debug.Debug)
+pub fn SmtpRetryPolicy::new(max_retries? : Int, retry_delay_ms? : Int, retry_on_connection_failure? : Bool, retry_on_timeout? : Bool, retry_on_transient_failure? : Bool) -> Self
+
+pub(all) enum SmtpSecurity {
+  Plain
+  StartTls
+  Tls
+} derive(Eq, @debug.Debug)
+
+pub struct SmtpTimeouts {
+  connect_ms : Int
+  greeting_ms : Int
+  command_ms : Int
+  data_ms : Int
+  idle_ms : Int
+} derive(Eq, @debug.Debug)
+pub fn SmtpTimeouts::new(connect_ms? : Int, greeting_ms? : Int, command_ms? : Int, data_ms? : Int, idle_ms? : Int) -> Self
+
+pub(all) enum SmtpTlsTrust {
+  SystemRoot
+  InsecureNoVerify
+  CustomPemFile(String)
+} derive(Eq, @debug.Debug)
+
+pub struct SmtpTransport {
+  // private fields
+}
+pub fn SmtpTransport::capabilities(Self) -> SmtpCapabilities?
+pub fn SmtpTransport::close(Self) -> Unit
+pub fn SmtpTransport::new(SmtpConfig) -> Self
+pub async fn SmtpTransport::send(Self, @core.Envelope, String) -> DeliveryOutcome
+pub async fn SmtpTransport::send_message(Self, @core.Envelope, @core.Message) -> DeliveryOutcome
+
+pub struct StubSmtpTransport {
+  pool_size : Int
+  planned_outcomes : Array[DeliveryOutcome]
+  mut next_plan_index : Int
+  attempts : Array[SmtpAttempt]
+  mut send_count : Int
+  mut closed : Bool
+} derive(@debug.Debug)
+pub fn StubSmtpTransport::attempts(Self) -> Array[SmtpAttempt]
+pub fn StubSmtpTransport::close(Self) -> Unit
+pub fn StubSmtpTransport::new(pool_size? : Int, planned_outcomes? : Array[DeliveryOutcome]) -> Self
+pub fn StubSmtpTransport::send(Self, @core.Envelope, String) -> Result[DeliveryOutcome, TransportError]
+pub fn StubSmtpTransport::send_message(Self, @core.Envelope, @core.Message) -> Result[DeliveryOutcome, TransportError]
+
+pub(all) enum TransportError {
+  ClosedTransport
+  IoFailure(String)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

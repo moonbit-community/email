@@ -96,13 +96,19 @@ pub struct TextBody {
 } derive(Eq, Debug)
 
 ///|
+pub enum AttachmentSource {
+  InMemory(Array[Byte])
+  FilePath(String)
+} derive(Eq, Debug)
+
+///|
 pub struct BinaryBody {
   content_type : ContentType
   disposition : ContentDisposition
   transfer_encoding : TransferEncoding
   filename : String?
   content_id : ContentId?
-  data : Array[Byte]
+  source : AttachmentSource
 } derive(Eq, Debug)
 
 ///|
@@ -151,6 +157,117 @@ pub fn ContentType::text_html() -> ContentType {
 ///|
 pub fn ContentType::application_octet_stream() -> ContentType {
   ContentType::new("application", "octet-stream", [])
+}
+
+///|
+pub fn Charset::utf8() -> Charset {
+  Utf8
+}
+
+///|
+pub fn Charset::us_ascii() -> Charset {
+  UsAscii
+}
+
+///|
+pub fn Charset::other(name : String) -> Charset {
+  Other(name)
+}
+
+///|
+pub fn TransferEncoding::seven_bit() -> TransferEncoding {
+  SevenBit
+}
+
+///|
+pub fn TransferEncoding::eight_bit() -> TransferEncoding {
+  EightBit
+}
+
+///|
+pub fn TransferEncoding::quoted_printable() -> TransferEncoding {
+  QuotedPrintable
+}
+
+///|
+pub fn TransferEncoding::base64() -> TransferEncoding {
+  Base64
+}
+
+///|
+pub fn TransferEncoding::binary() -> TransferEncoding {
+  Binary
+}
+
+///|
+pub fn DispositionKind::inline() -> DispositionKind {
+  Inline
+}
+
+///|
+pub fn DispositionKind::attachment() -> DispositionKind {
+  Attachment
+}
+
+///|
+pub fn DispositionKind::other(name : String) -> DispositionKind {
+  Other(name)
+}
+
+///|
+pub fn MultipartKind::mixed() -> MultipartKind {
+  Mixed
+}
+
+///|
+pub fn MultipartKind::alternative() -> MultipartKind {
+  Alternative
+}
+
+///|
+pub fn MultipartKind::related() -> MultipartKind {
+  Related
+}
+
+///|
+pub fn MultipartKind::custom(name : String) -> MultipartKind {
+  Custom(name)
+}
+
+///|
+pub fn AttachmentSource::in_memory(data : Array[Byte]) -> AttachmentSource {
+  InMemory(data)
+}
+
+///|
+pub fn AttachmentSource::file_path(path : String) -> AttachmentSource {
+  FilePath(path)
+}
+
+///|
+pub fn HeaderParam::new(name : String, value : String) -> HeaderParam {
+  { name, value }
+}
+
+///|
+pub fn ContentId::new(value : String) -> Result[ContentId, ValidationError] {
+  if value == "" {
+    Err(EmptyContentId)
+  } else {
+    Ok({ value, })
+  }
+}
+
+///|
+pub fn ContentDisposition::new(
+  kind : DispositionKind,
+  filename? : String,
+  parameters? : Array[HeaderParam] = [],
+) -> Result[ContentDisposition, ValidationError] {
+  match filename {
+    Some(name) if name == "" => Err(EmptyFilename)
+    _ => Ok({ kind, filename, parameters })
+  }
 }
 
 ///|
@@ -207,26 +324,26 @@ pub fn Body::html(content : String) -> Body {
 }
 
 ///|
+pub fn Body::text(
+  content_type : ContentType,
+  charset : Charset,
+  transfer_encoding : TransferEncoding,
+  content : String,
+) -> Body {
+  Text(TextBody::{ content_type, charset, transfer_encoding, content })
+}
+
+///|
 pub fn Body::attachment(
   filename : String,
   data : Array[Byte],
 ) -> Result[Body, ValidationError] {
-  if filename == "" {
-    return Err(EmptyFilename)
-  }
-  Ok(
-    Binary(BinaryBody::{
-      content_type: ContentType::application_octet_stream(),
-      disposition: ContentDisposition::{
-        kind: DispositionKind::Attachment,
-        filename: Some(filename),
-        parameters: [],
-      },
-      transfer_encoding: TransferEncoding::Base64,
-      filename: Some(filename),
-      content_id: None,
-      data,
-    }),
+  make_binary_body(
+    filename,
+    ContentType::application_octet_stream(),
+    DispositionKind::Attachment,
+    None,
+    InMemory(data),
   )
 }
 
@@ -237,24 +354,69 @@ pub fn Body::inline_asset(
   content_type : ContentType,
   data : Array[Byte],
 ) -> Result[Body, ValidationError] {
-  if content_id == "" {
-    return Err(EmptyContentId)
-  }
-  if filename == "" {
+  make_binary_body(
+    filename,
+    content_type,
+    DispositionKind::Inline,
+    Some(content_id),
+    InMemory(data),
+  )
+}
+
+///|
+pub fn Body::attachment_file(
+  filename : String,
+  path : String,
+  content_type? : ContentType = ContentType::application_octet_stream(),
+) -> Result[Body, ValidationError] {
+  make_binary_body(
+    filename,
+    content_type,
+    DispositionKind::Attachment,
+    None,
+    FilePath(path),
+  )
+}
+
+///|
+pub fn Body::inline_asset_file(
+  content_id : String,
+  filename : String,
+  path : String,
+  content_type : ContentType,
+) -> Result[Body, ValidationError] {
+  make_binary_body(
+    filename,
+    content_type,
+    DispositionKind::Inline,
+    Some(content_id),
+    FilePath(path),
+  )
+}
+
+///|
+pub fn Body::binary(
+  content_type : ContentType,
+  disposition : ContentDisposition,
+  transfer_encoding : TransferEncoding,
+  filename : String?,
+  content_id : ContentId?,
+  source : AttachmentSource,
+) -> Result[Body, ValidationError] {
+  if filename is Some(name) && name == "" {
     return Err(EmptyFilename)
+  }
+  if content_id is Some(id) && id.value == "" {
+    return Err(EmptyContentId)
   }
   Ok(
     Binary(BinaryBody::{
       content_type,
-      disposition: ContentDisposition::{
-        kind: DispositionKind::Inline,
-        filename: Some(filename),
-        parameters: [],
-      },
-      transfer_encoding: TransferEncoding::Base64,
-      filename: Some(filename),
-      content_id: Some(ContentId::{ value: content_id }),
-      data,
+      disposition,
+      transfer_encoding,
+      filename,
+      content_id,
+      source,
     }),
   )
 }
@@ -272,6 +434,14 @@ pub fn Body::alternative(parts : Array[Body]) -> Result[Body, ValidationError] {
 ///|
 pub fn Body::related(parts : Array[Body]) -> Result[Body, ValidationError] {
   make_multipart(MultipartKind::Related, parts)
+}
+
+///|
+pub fn Body::multipart(
+  kind : MultipartKind,
+  parts : Array[Body],
+) -> Result[Body, ValidationError] {
+  make_multipart(kind, parts)
 }
 
 ///|
@@ -334,6 +504,42 @@ fn make_multipart(
     Ok(_) => Ok(Multipart(kind, parts))
     Err(error) => Err(error)
   }
+}
+
+///|
+fn make_binary_body(
+  filename : String,
+  content_type : ContentType,
+  disposition_kind : DispositionKind,
+  content_id : String?,
+  source : AttachmentSource,
+) -> Result[Body, ValidationError] {
+  if filename == "" {
+    return Err(EmptyFilename)
+  }
+  let normalized_content_id = match content_id {
+    Some(value) =>
+      if value == "" {
+        return Err(EmptyContentId)
+      } else {
+        Some({ value, })
+      }
+    None => None
+  }
+  Ok(
+    Binary(BinaryBody::{
+      content_type,
+      disposition: ContentDisposition::{
+        kind: disposition_kind,
+        filename: Some(filename),
+        parameters: [],
+      },
+      transfer_encoding: TransferEncoding::Base64,
+      filename: Some(filename),
+      content_id: normalized_content_id,
+      source,
+    }),
+  )
 }
 
 ///|

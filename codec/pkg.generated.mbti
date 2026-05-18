@@ -1,13 +1,39 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/email/codec"
+package "nexacodes/email/codec"
+
+import {
+  "moonbitlang/core/debug",
+  "nexacodes/email/core",
+}
 
 // Values
+pub fn infer_content_type(String) -> @core.ContentType
+
+pub fn parse_rfc5322(String, mode? : MimeMode) -> @core.Message raise ParseError
+
+pub async fn render_to_rfc5322(@core.Message, mode? : MimeMode) -> String
+
+pub fn to_rfc5322(@core.Message) -> String
+
+pub async fn[W : MimeWriter] write_to(W, @core.Message, mode? : MimeMode) -> Unit
 
 // Errors
+pub(all) suberror ParseError {
+  Malformed(String)
+  Unsupported(String)
+  CoreValidation(@core.ValidationError)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) enum MimeMode {
+  Strict
+  Lenient
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
 // Traits
+pub(open) trait MimeWriter {
+  async write_text(Self, String) -> Unit
+}
 

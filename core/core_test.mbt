@@ -110,6 +110,10 @@ test "build multipart mixed with inline resource and attachment" {
         Binary(binary) => {
           assert_true(binary.filename == Some("report.pdf"))
           assert_true(binary.content_id == None)
+          match binary.source {
+            InMemory(data) => assert_true(data == [b'P', b'D', b'F'])
+            _ => abort("expected in-memory attachment source")
+          }
         }
         _ => abort("expected attachment body")
       }
@@ -207,4 +211,40 @@ test "derive smtp envelope from message recipients with deduplication" {
   let envelope = must_ok(Envelope::from_message(from, message))
   assert_true(envelope.mail_from == from)
   assert_true(envelope.rcpt_to == [to, bcc])
+}
+
+///|
+test "allow file-backed attachment sources without loading payloads" {
+  let attachment = must_ok(
+    Body::attachment_file("report.txt", "/tmp/report.txt"),
+  )
+  let inline = must_ok(
+    Body::inline_asset_file(
+      "logo",
+      "logo.png",
+      "/tmp/logo.png",
+      ContentType::new("image", "png", []),
+    ),
+  )
+  match attachment {
+    Binary(binary) =>
+      match binary.source {
+        FilePath(path) => assert_true(path == "/tmp/report.txt")
+        _ => abort("expected file-backed attachment")
+      }
+    _ => abort("expected binary attachment")
+  }
+  match inline {
+    Binary(binary) => {
+      match binary.content_id {
+        Some(id) => assert_true(id.value == "logo")
+        None => abort("expected inline content id")
+      }
+      match binary.source {
+        FilePath(path) => assert_true(path == "/tmp/logo.png")
+        _ => abort("expected file-backed inline asset")
+      }
+    }
+    _ => abort("expected binary inline asset")
+  }
 }

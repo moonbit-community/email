@@ -1,6 +1,7 @@
 ///|
 pub(all) enum TransportError {
   ClosedTransport
+  IoFailure(String)
 } derive(Eq, Debug)
 
 ///|
@@ -53,7 +54,7 @@ pub struct FileTransport {
 } derive(Debug)
 
 ///|
-pub struct SmtpTransport {
+pub struct StubSmtpTransport {
   pool_size : Int
   planned_outcomes : Array[DeliveryOutcome]
   mut next_plan_index : Int
@@ -67,7 +68,13 @@ pub fn DeliveryOutcome::all_accepted(
   recipients : Array[@core.Mailbox],
   response? : String = "250 OK",
 ) -> DeliveryOutcome {
-  { accepted: recipients, rejected: [], unsent: [], response, failure_class: None }
+  {
+    accepted: recipients,
+    rejected: [],
+    unsent: [],
+    response,
+    failure_class: None,
+  }
 }
 
 ///|
@@ -124,7 +131,17 @@ pub fn FileTransport::new(root_dir : String) -> FileTransport {
 }
 
 ///|
-pub fn FileTransport::send(
+priv struct FileMimeWriter {
+  file : @fs.File
+}
+
+///|
+impl @codec.MimeWriter for FileMimeWriter with write_text(self, text) {
+  self.file.write(text)
+}
+
+///|
+pub async fn FileTransport::send(
   self : FileTransport,
   envelope : @core.Envelope,
   encoded_message : String,
@@ -132,22 +149,57 @@ pub fn FileTransport::send(
   if self.closed {
     return Err(ClosedTransport)
   }
-  let artifact = {
-    path: self.root_dir + "/" + format_artifact_name(self.next_index),
-    content: encoded_message,
+  let artifact_path = self.root_dir +
+    "/" +
+    format_artifact_name(self.next_index)
+  try {
+    if !@fs.exists(self.root_dir) {
+      @fs.mkdir(self.root_dir, recursive=true)
+    }
+    @fs.write_file(
+      artifact_path,
+      encoded_message,
+      create_mode=@fs.CreateOrTruncate,
+    )
+  } catch {
+    err => return Err(IoFailure(err.to_string()))
   }
+  let artifact = { path: artifact_path, content: encoded_message }
   self.next_index += 1
   self.artifacts.push(artifact)
   Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
 }
 
 ///|
-pub fn FileTransport::send_message(
+pub async fn FileTransport::send_message(
   self : FileTransport,
   envelope : @core.Envelope,
   message : @core.Message,
 ) -> Result[DeliveryOutcome, TransportError] {
-  self.send(envelope, @codec.to_rfc5322(message))
+  if self.closed {
+    return Err(ClosedTransport)
+  }
+  try {
+    if !@fs.exists(self.root_dir) {
+      @fs.mkdir(self.root_dir, recursive=true)
+    }
+    let artifact_path = self.root_dir +
+      "/" +
+      format_artifact_name(self.next_index)
+    let file = @fs.open(
+      artifact_path,
+      mode=@fs.WriteOnly,
+      create_mode=@fs.CreateOrTruncate,
+    )
+    defer file.close()
+    @codec.write_to(FileMimeWriter::{ file, }, message)
+    let encoded = @fs.read_file(artifact_path).text()
+    self.next_index += 1
+    self.artifacts.push({ path: artifact_path, content: encoded })
+    Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
+  } catch {
+    err => Err(IoFailure(err.to_string()))
+  }
 }
 
 ///|
@@ -161,10 +213,10 @@ pub fn FileTransport::artifacts(self : FileTransport) -> Array[FileArtifact] {
 }
 
 ///|
-pub fn SmtpTransport::new(
+pub fn StubSmtpTransport::new(
   pool_size? : Int = 1,
   planned_outcomes? : Array[DeliveryOutcome] = [],
-) -> SmtpTransport {
+) -> StubSmtpTransport {
   let normalized_pool = if pool_size < 1 { 1 } else { pool_size }
   {
     pool_size: normalized_pool,
@@ -177,8 +229,8 @@ pub fn SmtpTransport::new(
 }
 
 ///|
-pub fn SmtpTransport::send(
-  self : SmtpTransport,
+pub fn StubSmtpTransport::send(
+  self : StubSmtpTransport,
   envelope : @core.Envelope,
   encoded_message : String,
 ) -> Result[DeliveryOutcome, TransportError] {
@@ -193,8 +245,8 @@ pub fn SmtpTransport::send(
 }
 
 ///|
-pub fn SmtpTransport::send_message(
-  self : SmtpTransport,
+pub fn StubSmtpTransport::send_message(
+  self : StubSmtpTransport,
   envelope : @core.Envelope,
   message : @core.Message,
 ) -> Result[DeliveryOutcome, TransportError] {
@@ -202,18 +254,20 @@ pub fn SmtpTransport::send_message(
 }
 
 ///|
-pub fn SmtpTransport::close(self : SmtpTransport) -> Unit {
+pub fn StubSmtpTransport::close(self : StubSmtpTransport) -> Unit {
   self.closed = true
 }
 
 ///|
-pub fn SmtpTransport::attempts(self : SmtpTransport) -> Array[SmtpAttempt] {
+pub fn StubSmtpTransport::attempts(
+  self : StubSmtpTransport,
+) -> Array[SmtpAttempt] {
   self.attempts
 }
 
 ///|
-fn SmtpTransport::next_outcome(
-  self : SmtpTransport,
+fn StubSmtpTransport::next_outcome(
+  self : StubSmtpTransport,
   envelope : @core.Envelope,
 ) -> DeliveryOutcome {
   match self.planned_outcomes.get(self.next_plan_index) {
@@ -286,9 +340,13 @@ fn parse_status_code(response : String) -> Int? {
   let c0 = response.code_unit_at(0).to_int()
   let c1 = response.code_unit_at(1).to_int()
   let c2 = response.code_unit_at(2).to_int()
-  if is_ascii_digit_unit(c0) && is_ascii_digit_unit(c1) && is_ascii_digit_unit(c2) {
+  if is_ascii_digit_unit(c0) &&
+    is_ascii_digit_unit(c1) &&
+    is_ascii_digit_unit(c2) {
     Some(
-      (digit_value_unit(c0) * 100) + (digit_value_unit(c1) * 10) + digit_value_unit(c2),
+      digit_value_unit(c0) * 100 +
+      digit_value_unit(c1) * 10 +
+      digit_value_unit(c2),
     )
   } else {
     None
@@ -308,14 +366,4 @@ fn digit_value_unit(code_unit : Int) -> Int {
 ///|
 fn assign_connection_id(send_index : Int, pool_size : Int) -> Int {
   send_index % pool_size
-}
-
-///|
-fn schedule_connection_ids(delivery_count : Int, pool_size : Int) -> Array[Int] {
-  let normalized_pool = if pool_size < 1 { 1 } else { pool_size }
-  let assigned : Array[Int] = []
-  for index in 0..<delivery_count {
-    assigned.push(assign_connection_id(index, normalized_pool))
-  }
-  assigned
 }

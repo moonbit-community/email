@@ -1,6 +1,10 @@
-// import {
-//   "username/email" @lib,
-// }
+import {
+  "nexacodes/email/core",
+  "nexacodes/email/codec",
+  "nexacodes/email/transport",
+  "moonbitlang/core/argparse",
+  "moonbitlang/async",
+}
 
 options(
   "is-main": true,

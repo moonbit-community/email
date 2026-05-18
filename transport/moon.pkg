@@ -1,4 +1,11 @@
 import {
-  "username/email/core",
-  "username/email/codec",
+  "nexacodes/email/core",
+  "nexacodes/email/codec",
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+  "moonbitlang/async/socket",
+  "moonbitlang/async/tls",
 }
