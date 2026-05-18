@@ -1,0 +1,148 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/email/core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct BinaryBody {
+  content_type : ContentType
+  disposition : ContentDisposition
+  transfer_encoding : TransferEncoding
+  filename : String?
+  content_id : ContentId?
+  data : Array[Byte]
+} derive(Eq, @debug.Debug)
+
+pub enum Body {
+  Text(TextBody)
+  Binary(BinaryBody)
+  Multipart(MultipartKind, Array[Body])
+} derive(Eq, @debug.Debug)
+pub fn Body::alternative(Array[Self]) -> Result[Self, ValidationError]
+pub fn Body::attachment(String, Array[Byte]) -> Result[Self, ValidationError]
+pub fn Body::html(String) -> Self
+pub fn Body::inline_asset(String, String, ContentType, Array[Byte]) -> Result[Self, ValidationError]
+pub fn Body::mixed(Array[Self]) -> Result[Self, ValidationError]
+pub fn Body::plain_text(String) -> Self
+pub fn Body::related(Array[Self]) -> Result[Self, ValidationError]
+
+pub enum Charset {
+  Utf8
+  UsAscii
+  Other(String)
+} derive(Eq, @debug.Debug)
+
+pub struct ContentDisposition {
+  kind : DispositionKind
+  filename : String?
+  parameters : Array[HeaderParam]
+} derive(Eq, @debug.Debug)
+
+pub struct ContentId {
+  value : String
+} derive(Eq, @debug.Debug)
+
+pub struct ContentType {
+  top_level : String
+  sub_type : String
+  parameters : Array[HeaderParam]
+} derive(Eq, @debug.Debug)
+pub fn ContentType::application_octet_stream() -> Self
+pub fn ContentType::new(String, String, Array[HeaderParam]) -> Self
+pub fn ContentType::text_html() -> Self
+pub fn ContentType::text_plain() -> Self
+
+pub enum DispositionKind {
+  Inline
+  Attachment
+  Other(String)
+} derive(Eq, @debug.Debug)
+
+pub struct Envelope {
+  mail_from : Mailbox
+  rcpt_to : Array[Mailbox]
+} derive(Eq, @debug.Debug)
+pub fn Envelope::from_message(Mailbox, Message) -> Result[Self, ValidationError]
+pub fn Envelope::new(Mailbox, Array[Mailbox]) -> Result[Self, ValidationError]
+
+pub struct Header {
+  name : String
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn Header::new(String, String) -> Result[Self, ValidationError]
+
+pub struct HeaderParam {
+  name : String
+  value : String
+} derive(Eq, @debug.Debug)
+
+pub struct Mailbox {
+  display_name : String?
+  address : String
+} derive(Eq, @debug.Debug)
+pub fn Mailbox::address_only(String) -> Result[Self, ValidationError]
+pub fn Mailbox::new(String, String?) -> Result[Self, ValidationError]
+
+pub struct Message {
+  from : Mailbox
+  to : Array[Mailbox]
+  cc : Array[Mailbox]
+  bcc : Array[Mailbox]
+  subject : String
+  headers : Array[Header]
+  body : Body
+} derive(Eq, @debug.Debug)
+pub fn Message::all_recipients(Self) -> Array[Mailbox]
+pub fn Message::new(Mailbox, Array[Mailbox], Array[Mailbox], Array[Mailbox], String, Body, Array[Header]) -> Result[Self, ValidationError]
+
+pub enum MultipartKind {
+  Mixed
+  Alternative
+  Related
+  Custom(String)
+} derive(Eq, @debug.Debug)
+
+pub struct TextBody {
+  content_type : ContentType
+  charset : Charset
+  transfer_encoding : TransferEncoding
+  content : String
+} derive(Eq, @debug.Debug)
+
+pub enum TransferEncoding {
+  SevenBit
+  EightBit
+  QuotedPrintable
+  Base64
+  Binary
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ValidationError {
+  EmptyAddress
+  MissingAtSign
+  MultipleAtSigns
+  MissingLocalPart
+  MissingDomain
+  UnexpectedWhitespace
+  EmptyHeaderName
+  IllegalHeaderNameChar(Char)
+  IllegalHeaderValueChar(Char)
+  EmptyRecipients
+  EmptyMessageRecipients
+  EmptyMultipart
+  AlternativeNeedsTwoParts
+  AlternativeRequiresTextParts
+  EmptyFilename
+  EmptyContentId
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

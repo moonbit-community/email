@@ -1,0 +1,2 @@
+// Package scaffold for ext.
+// Intended dependency direction: ext -> core, codec, transport.

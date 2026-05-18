@@ -1,3 +1,10 @@
-// Whitebox tests run within the package scope.
-// Use them to validate internal helpers or invariants.
-// Keep them focused; public behavior belongs in `_test.mbt`.
+///|
+/// Facade-level whitebox cases.
+test "facade stays thin and delegates to subpackages" {
+  // TODO: verify that the facade does not accumulate protocol logic.
+}
+
+///|
+test "facade avoids duplicating mime and transport internals" {
+  // TODO: verify that facade helpers remain wrappers instead of second implementations.
+}

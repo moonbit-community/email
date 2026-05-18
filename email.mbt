@@ -1,3 +1,3 @@
-// Main package file for your library code.
-// Put public APIs and shared helpers here.
-// Keep blocks small and focused for easy refactors.
+///|
+/// Top-level facade package.
+/// Keep this package thin and use it to re-export stable APIs from subpackages.
