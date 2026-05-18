@@ -117,6 +117,30 @@ pub fn compose_mixed(
 }
 
 ///|
+async fn send_composed_message(
+  config : SmtpConfig,
+  message_result : Result[Message, ValidationError],
+  mail_from : Mailbox?,
+) -> Result[DeliveryOutcome, ValidationError] {
+  match message_result {
+    Ok(message) => {
+      let envelope_result = match mail_from {
+        Some(value) => Envelope::from_message(value, message)
+        None => Envelope::from_message(message.from, message)
+      }
+      match envelope_result {
+        Ok(envelope) => {
+          let transport = SmtpTransport::new(config)
+          Ok(transport.send_message(envelope, message))
+        }
+        Err(error) => Err(error)
+      }
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
 pub fn envelope_for(
   message : Message,
   mail_from? : Mailbox,
@@ -126,4 +150,61 @@ pub fn envelope_for(
     None => message.from
   }
   Envelope::from_message(sender, message)
+}
+
+///|
+pub async fn send_plain_text(
+  config : SmtpConfig,
+  from : Mailbox,
+  to : Array[Mailbox],
+  subject : String,
+  content : String,
+  cc? : Array[Mailbox] = [],
+  bcc? : Array[Mailbox] = [],
+  headers? : Array[Header] = [],
+  mail_from? : Mailbox,
+) -> Result[DeliveryOutcome, ValidationError] {
+  send_composed_message(
+    config,
+    compose_plain_text(from, to, subject, content, cc~, bcc~, headers~),
+    mail_from,
+  )
+}
+
+///|
+pub async fn send_html(
+  config : SmtpConfig,
+  from : Mailbox,
+  to : Array[Mailbox],
+  subject : String,
+  content : String,
+  cc? : Array[Mailbox] = [],
+  bcc? : Array[Mailbox] = [],
+  headers? : Array[Header] = [],
+  mail_from? : Mailbox,
+) -> Result[DeliveryOutcome, ValidationError] {
+  send_composed_message(
+    config,
+    compose_html(from, to, subject, content, cc~, bcc~, headers~),
+    mail_from,
+  )
+}
+
+///|
+pub async fn send_mixed(
+  config : SmtpConfig,
+  from : Mailbox,
+  to : Array[Mailbox],
+  subject : String,
+  parts : Array[Body],
+  cc? : Array[Mailbox] = [],
+  bcc? : Array[Mailbox] = [],
+  headers? : Array[Header] = [],
+  mail_from? : Mailbox,
+) -> Result[DeliveryOutcome, ValidationError] {
+  send_composed_message(
+    config,
+    compose_mixed(from, to, subject, parts, cc~, bcc~, headers~),
+    mail_from,
+  )
 }

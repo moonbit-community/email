@@ -2,4 +2,5 @@ import {
   "nexacodes/email/core",
   "nexacodes/email/codec",
   "nexacodes/email/transport",
+  "moonbitlang/async",
 }

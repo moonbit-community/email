@@ -69,3 +69,24 @@ test "allow low-level escape hatches for pre-encoded messages and custom transpo
   assert_true(outcome.accepted == [to])
   assert_true(transport.records()[0].encoded_message == raw)
 }
+
+///|
+async test "send_plain_text validates inputs before smtp delivery" {
+  let from = must_ok(Mailbox::address_only("sender@example.com"))
+  let config = SmtpConfig::new("127.0.0.1", 2525)
+  match send_plain_text(config, from, [], "Hello", "Facade flow") {
+    Err(ValidationError::EmptyMessageRecipients) => ()
+    _ => abort("expected EmptyMessageRecipients")
+  }
+}
+
+///|
+async test "send_mixed surfaces multipart validation errors" {
+  let from = must_ok(Mailbox::address_only("sender@example.com"))
+  let to = must_ok(Mailbox::address_only("reader@example.com"))
+  let config = SmtpConfig::new("127.0.0.1", 2525)
+  match send_mixed(config, from, [to], "Broken multipart", []) {
+    Err(ValidationError::EmptyMultipart) => ()
+    _ => abort("expected EmptyMultipart")
+  }
+}

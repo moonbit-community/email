@@ -24,6 +24,12 @@ pub fn parse_rfc5322(String, mode? : @codec.MimeMode) -> @core.Message raise @co
 
 pub async fn render_to_rfc5322(@core.Message, mode? : @codec.MimeMode) -> String
 
+pub async fn send_html(@transport.SmtpConfig, @core.Mailbox, Array[@core.Mailbox], String, String, cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header], mail_from? : @core.Mailbox) -> Result[@transport.DeliveryOutcome, @core.ValidationError]
+
+pub async fn send_mixed(@transport.SmtpConfig, @core.Mailbox, Array[@core.Mailbox], String, Array[@core.Body], cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header], mail_from? : @core.Mailbox) -> Result[@transport.DeliveryOutcome, @core.ValidationError]
+
+pub async fn send_plain_text(@transport.SmtpConfig, @core.Mailbox, Array[@core.Mailbox], String, String, cc? : Array[@core.Mailbox], bcc? : Array[@core.Mailbox], headers? : Array[@core.Header], mail_from? : @core.Mailbox) -> Result[@transport.DeliveryOutcome, @core.ValidationError]
+
 pub fn to_rfc5322(@core.Message) -> String
 
 // Errors
