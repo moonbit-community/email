@@ -257,6 +257,7 @@ async fn SmtpTransport::send_payload(
   for ;; {
     let progress = SendProgress::{ data_started: false, }
     try {
+      errdefer self.close_live_connection()
       self.ensure_live_connection()
       let outcome = self.deliver_with_live_connection(
         envelope, payload, progress,
@@ -268,15 +269,18 @@ async fn SmtpTransport::send_payload(
       return outcome
     } catch {
       err => {
-        self.close_live_connection()
-        if should_retry_send(self.config.retry_policy, err, progress, attempt) {
-          attempt += 1
-          if self.config.retry_policy.retry_delay_ms > 0 {
-            @async.sleep(self.config.retry_policy.retry_delay_ms)
-          }
-          continue
+        guard should_retry_send(
+          self.config.retry_policy,
+          err,
+          progress,
+          attempt,
+        ) else {
+          raise err
         }
-        raise err
+        attempt += 1
+        if self.config.retry_policy.retry_delay_ms > 0 {
+          @async.sleep(self.config.retry_policy.retry_delay_ms)
+        }
       }
     }
   }
@@ -386,103 +390,70 @@ async fn open_authenticated_connection(
       let conn = execute_phase(Connect, config.timeouts.connect_ms, async fn() {
         @socket.Tcp::connect_to_host(config.host, port=config.port)
       })
-      try {
-        let session = PlainSmtpSession::{ io: conn, }
-        let capabilities = smtp_greet_and_hello(session, config, true)
-        smtp_auth(session, config.auth, capabilities, config.timeouts)
-        (Plain(session), capabilities)
-      } catch {
-        err => {
-          conn.close()
-          raise err
-        }
-      }
+      errdefer conn.close()
+      let session = PlainSmtpSession::{ io: conn, }
+      let capabilities = smtp_greet_and_hello(session, config, true)
+      smtp_auth(session, config.auth, capabilities, config.timeouts)
+      (Plain(session), capabilities)
     }
     Tls => {
       let conn = execute_phase(Connect, config.timeouts.connect_ms, async fn() {
         @socket.Tcp::connect_to_host(config.host, port=config.port)
       })
-      let tls = execute_phase(TlsHandshake, config.timeouts.connect_ms, async fn() {
-        @tls.Tls::client(
-          conn,
-          host=config.host,
-          trust=smtp_tls_trust_to_async(config.tls_trust),
-        )
-      }) catch {
-        err => {
-          conn.close()
-          raise err
-        }
+      let tls = {
+        errdefer conn.close()
+        execute_phase(TlsHandshake, config.timeouts.connect_ms, async fn() {
+          @tls.Tls::client(
+            conn,
+            host=config.host,
+            trust=smtp_tls_trust_to_async(config.tls_trust),
+          )
+        })
       }
-      try {
-        let session = TlsSmtpSession::{ io: tls, }
-        let capabilities = smtp_greet_and_hello(session, config, true)
-        smtp_auth(session, config.auth, capabilities, config.timeouts)
-        (Tls(session), capabilities)
-      } catch {
-        err => {
-          tls.close()
-          raise err
-        }
-      }
+      errdefer tls.close()
+      let session = TlsSmtpSession::{ io: tls, }
+      let capabilities = smtp_greet_and_hello(session, config, true)
+      smtp_auth(session, config.auth, capabilities, config.timeouts)
+      (Tls(session), capabilities)
     }
     StartTls => {
       let conn = execute_phase(Connect, config.timeouts.connect_ms, async fn() {
         @socket.Tcp::connect_to_host(config.host, port=config.port)
       })
-      let plain = PlainSmtpSession::{ io: conn, }
-      let negotiated = smtp_greet_and_hello(plain, config, false) catch {
-        err => {
-          conn.close()
-          raise err
+      let tls = {
+        errdefer conn.close()
+        let plain = PlainSmtpSession::{ io: conn, }
+        let negotiated = smtp_greet_and_hello(plain, config, false)
+        guard negotiated.supports_starttls else {
+          raise MissingExtension("STARTTLS")
         }
-      }
-      guard negotiated.supports_starttls else {
-        conn.close()
-        raise MissingExtension("STARTTLS")
-      }
-      ignore(
-        send_command_expect_status(
-          plain,
-          "STARTTLS",
-          220,
-          StartTls,
-          config.timeouts.command_ms,
-        ),
-      ) catch {
-        err => {
-          conn.close()
-          raise err
-        }
-      }
-      let tls = execute_phase(TlsHandshake, config.timeouts.connect_ms, async fn() {
-        @tls.Tls::client(
-          plain.io,
-          host=config.host,
-          trust=smtp_tls_trust_to_async(config.tls_trust),
+        ignore(
+          send_command_expect_status(
+            plain,
+            "STARTTLS",
+            220,
+            StartTls,
+            config.timeouts.command_ms,
+          ),
         )
-      }) catch {
-        err => {
-          conn.close()
-          raise err
-        }
+        execute_phase(TlsHandshake, config.timeouts.connect_ms, async fn() {
+          @tls.Tls::client(
+            plain.io,
+            host=config.host,
+            trust=smtp_tls_trust_to_async(config.tls_trust),
+          )
+        })
       }
-      try {
-        let session = TlsSmtpSession::{ io: tls, }
-        let capabilities = send_hello(
-          session,
-          config.hello_name,
-          false,
-          config.timeouts.command_ms,
-        )
-        smtp_auth(session, config.auth, capabilities, config.timeouts)
-        (Tls(session), capabilities)
-      } catch {
-        err => {
-          tls.close()
-          raise err
-        }
-      }
+      errdefer tls.close()
+      let session = TlsSmtpSession::{ io: tls, }
+      let capabilities = send_hello(
+        session,
+        config.hello_name,
+        false,
+        config.timeouts.command_ms,
+      )
+      smtp_auth(session, config.auth, capabilities, config.timeouts)
+      (Tls(session), capabilities)
     }
   }
 }
