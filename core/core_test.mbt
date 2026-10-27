@@ -8,8 +8,8 @@ fn[T, E] must_ok(result : Result[T, E]) -> T {
 
 ///|
 fn[T] expect_validation_error(
-  result : Result[T, ValidationError],
-  expected : ValidationError,
+  result : Result[T, @core.ValidationError],
+  expected : @core.ValidationError,
 ) -> Unit {
   match result {
     Ok(_) => abort("expected Err result")
@@ -25,24 +25,26 @@ fn[T] expect_validation_error(
 ///|
 /// Inspired by mature message builders such as Nodemailer, lettre, and MimeKit.
 test "build mailbox with display name and address" {
-  let mailbox = must_ok(Mailbox::new("alice@example.com", Some("Alice")))
+  let mailbox = must_ok(@core.Mailbox::new("alice@example.com", Some("Alice")))
   assert_true(mailbox.address == "alice@example.com")
   assert_true(mailbox.display_name == Some("Alice"))
 }
 
 ///|
 test "build plain text message with explicit smtp envelope" {
-  let from = must_ok(Mailbox::address_only("sender@example.com"))
-  let to = must_ok(Mailbox::address_only("reader@example.com"))
-  let body = Body::plain_text("Hello, MoonBit")
-  let message = must_ok(Message::new(from, [to], [], [], "Greetings", body, []))
-  let envelope = must_ok(Envelope::new(from, [to]))
+  let from = must_ok(@core.Mailbox::address_only("sender@example.com"))
+  let to = must_ok(@core.Mailbox::address_only("reader@example.com"))
+  let body = @core.Body::plain_text("Hello, MoonBit")
+  let message = must_ok(
+    @core.Message::new(from, [to], [], [], "Greetings", body, []),
+  )
+  let envelope = must_ok(@core.Envelope::new(from, [to]))
   assert_true(message.from == from)
   assert_true(message.subject == "Greetings")
   match message.body {
     Text(text) => {
       assert_true(text.content == "Hello, MoonBit")
-      assert_true(text.content_type == ContentType::text_plain())
+      assert_true(text.content_type == @core.ContentType::text_plain())
     }
     _ => abort("expected text body")
   }
@@ -53,7 +55,10 @@ test "build plain text message with explicit smtp envelope" {
 ///|
 test "build multipart alternative text and html message" {
   let body = must_ok(
-    Body::alternative([Body::plain_text("Hello"), Body::html("<p>Hello</p>")]),
+    @core.Body::alternative([
+      @core.Body::plain_text("Hello"),
+      @core.Body::html("<p>Hello</p>"),
+    ]),
   )
   match body {
     Multipart(kind, parts) => {
@@ -77,18 +82,20 @@ test "build multipart alternative text and html message" {
 
 ///|
 test "build multipart mixed with inline resource and attachment" {
-  let html = Body::html("<p>Hello<img src=\"cid:logo\"></p>")
+  let html = @core.Body::html("<p>Hello<img src=\"cid:logo\"></p>")
   let logo = must_ok(
-    Body::inline_asset(
+    @core.Body::inline_asset(
       "logo",
       "logo.png",
-      ContentType::new("image", "png", []),
+      @core.ContentType::new("image", "png", []),
       [b'P', b'N', b'G'],
     ),
   )
-  let related = must_ok(Body::related([html, logo]))
-  let attachment = must_ok(Body::attachment("report.pdf", [b'P', b'D', b'F']))
-  let mixed = must_ok(Body::mixed([related, attachment]))
+  let related = must_ok(@core.Body::related([html, logo]))
+  let attachment = must_ok(
+    @core.Body::attachment("report.pdf", [b'P', b'D', b'F']),
+  )
+  let mixed = must_ok(@core.Body::mixed([related, attachment]))
   match mixed {
     Multipart(kind, parts) => {
       match kind {
@@ -124,42 +131,53 @@ test "build multipart mixed with inline resource and attachment" {
 
 ///|
 test "reject invalid mailbox, empty recipients, and invalid attachment metadata" {
-  expect_validation_error(Mailbox::address_only(""), EmptyAddress)
+  expect_validation_error(@core.Mailbox::address_only(""), EmptyAddress)
   expect_validation_error(
-    Mailbox::address_only("alice example.com"),
+    @core.Mailbox::address_only("alice example.com"),
     UnexpectedWhitespace,
   )
-  let from = must_ok(Mailbox::address_only("sender@example.com"))
+  let from = must_ok(@core.Mailbox::address_only("sender@example.com"))
   expect_validation_error(
-    Message::new(from, [], [], [], "No recipients", Body::plain_text("Hi"), []),
+    @core.Message::new(
+      from,
+      [],
+      [],
+      [],
+      "No recipients",
+      @core.Body::plain_text("Hi"),
+      [],
+    ),
     EmptyMessageRecipients,
   )
-  expect_validation_error(Body::attachment("", [b'X']), EmptyFilename)
+  expect_validation_error(@core.Body::attachment("", [b'X']), EmptyFilename)
   expect_validation_error(
-    Body::inline_asset("", "logo.png", ContentType::new("image", "png", []), [
-      b'X',
-    ]),
+    @core.Body::inline_asset(
+      "",
+      "logo.png",
+      @core.ContentType::new("image", "png", []),
+      [b'X'],
+    ),
     EmptyContentId,
   )
 }
 
 ///|
 test "keep message recipients separate from smtp envelope recipients" {
-  let from = must_ok(Mailbox::address_only("sender@example.com"))
-  let visible = must_ok(Mailbox::address_only("visible@example.com"))
-  let hidden = must_ok(Mailbox::address_only("hidden@example.com"))
+  let from = must_ok(@core.Mailbox::address_only("sender@example.com"))
+  let visible = must_ok(@core.Mailbox::address_only("visible@example.com"))
+  let hidden = must_ok(@core.Mailbox::address_only("hidden@example.com"))
   let message = must_ok(
-    Message::new(
+    @core.Message::new(
       from,
       [visible],
       [],
       [hidden],
       "Hidden recipient flow",
-      Body::plain_text("Hi"),
+      @core.Body::plain_text("Hi"),
       [],
     ),
   )
-  let envelope = must_ok(Envelope::new(from, [hidden]))
+  let envelope = must_ok(@core.Envelope::new(from, [hidden]))
   assert_true(message.to == [visible])
   assert_true(message.bcc == [hidden])
   assert_true(message.all_recipients() == [visible, hidden])
@@ -168,13 +186,13 @@ test "keep message recipients separate from smtp envelope recipients" {
 
 ///|
 test "reject alternative multipart containing attachments" {
-  let attachment = must_ok(Body::attachment("report.txt", [b'R']))
+  let attachment = must_ok(@core.Body::attachment("report.txt", [b'R']))
   expect_validation_error(
-    Body::alternative([Body::plain_text("Hello"), attachment]),
+    @core.Body::alternative([@core.Body::plain_text("Hello"), attachment]),
     AlternativeRequiresTextParts,
   )
   expect_validation_error(
-    Body::alternative([Body::plain_text("Hello")]),
+    @core.Body::alternative([@core.Body::plain_text("Hello")]),
     AlternativeNeedsTwoParts,
   )
 }
@@ -182,33 +200,35 @@ test "reject alternative multipart containing attachments" {
 ///|
 test "reject header injection characters" {
   expect_validation_error(
-    Header::new("X Unsafe", "value"),
-    ValidationError::IllegalHeaderNameChar(' '),
+    @core.Header::new("X Unsafe", "value"),
+    IllegalHeaderNameChar(' '),
   )
   expect_validation_error(
-    Header::new("X-Safe", "line1\rline2"),
-    ValidationError::IllegalHeaderValueChar('\r'),
+    @core.Header::new("X-Safe", "line1\rline2"),
+    IllegalHeaderValueChar('\r'),
   )
 }
 
 ///|
 test "derive smtp envelope from message recipients with deduplication" {
-  let from = must_ok(Mailbox::address_only("sender@example.com"))
-  let to = must_ok(Mailbox::address_only("reader@example.com"))
-  let cc = must_ok(Mailbox::new("reader@example.com", Some("Reader Alias")))
-  let bcc = must_ok(Mailbox::address_only("hidden@example.com"))
+  let from = must_ok(@core.Mailbox::address_only("sender@example.com"))
+  let to = must_ok(@core.Mailbox::address_only("reader@example.com"))
+  let cc = must_ok(
+    @core.Mailbox::new("reader@example.com", Some("Reader Alias")),
+  )
+  let bcc = must_ok(@core.Mailbox::address_only("hidden@example.com"))
   let message = must_ok(
-    Message::new(
+    @core.Message::new(
       from,
       [to],
       [cc],
       [bcc],
       "Recipients",
-      Body::plain_text("Hi"),
+      @core.Body::plain_text("Hi"),
       [],
     ),
   )
-  let envelope = must_ok(Envelope::from_message(from, message))
+  let envelope = must_ok(@core.Envelope::from_message(from, message))
   assert_true(envelope.mail_from == from)
   assert_true(envelope.rcpt_to == [to, bcc])
 }
@@ -216,14 +236,14 @@ test "derive smtp envelope from message recipients with deduplication" {
 ///|
 test "allow file-backed attachment sources without loading payloads" {
   let attachment = must_ok(
-    Body::attachment_file("report.txt", "/tmp/report.txt"),
+    @core.Body::attachment_file("report.txt", "/tmp/report.txt"),
   )
   let inline = must_ok(
-    Body::inline_asset_file(
+    @core.Body::inline_asset_file(
       "logo",
       "logo.png",
       "/tmp/logo.png",
-      ContentType::new("image", "png", []),
+      @core.ContentType::new("image", "png", []),
     ),
   )
   match attachment {

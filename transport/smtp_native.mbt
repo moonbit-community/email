@@ -491,9 +491,9 @@ async fn open_authenticated_connection(
 fn auth_mechanism_for(auth : SmtpAuth) -> SmtpAuthMechanism? {
   match auth {
     None => None
-    Plain(_, _) => Some(SmtpAuthMechanism::Plain)
-    Login(_, _) => Some(SmtpAuthMechanism::Login)
-    Xoauth2(_, _) => Some(SmtpAuthMechanism::Xoauth2)
+    Plain(_, _) => Some(Plain)
+    Login(_, _) => Some(Login)
+    Xoauth2(_, _) => Some(Xoauth2)
   }
 }
 
@@ -589,7 +589,7 @@ priv struct PlainSmtpDataWriter {
 impl @codec.MimeWriter for PlainSmtpDataWriter with fn write_text(self, text) {
   let (stuffed, at_line_start) = dot_stuff_chunk(text, self.at_line_start)
   self.at_line_start = at_line_start
-  self.session.write_text(stuffed)
+  SmtpSession::write_text(self.session, stuffed)
 }
 
 ///|
@@ -602,7 +602,7 @@ priv struct TlsSmtpDataWriter {
 impl @codec.MimeWriter for TlsSmtpDataWriter with fn write_text(self, text) {
   let (stuffed, at_line_start) = dot_stuff_chunk(text, self.at_line_start)
   self.at_line_start = at_line_start
-  self.session.write_text(stuffed)
+  SmtpSession::write_text(self.session, stuffed)
 }
 
 ///|
@@ -712,9 +712,9 @@ fn parse_capabilities(lines : Array[String]) -> SmtpCapabilities {
 ///|
 fn parse_auth_mechanism_name(name : String) -> SmtpAuthMechanism? {
   match name {
-    "PLAIN" => Some(SmtpAuthMechanism::Plain)
-    "LOGIN" => Some(SmtpAuthMechanism::Login)
-    "XOAUTH2" => Some(SmtpAuthMechanism::Xoauth2)
+    "PLAIN" => Some(Plain)
+    "LOGIN" => Some(Login)
+    "XOAUTH2" => Some(Xoauth2)
     _ => None
   }
 }
@@ -969,8 +969,7 @@ fn should_retry_send(
     ConnectionFailure(_, _) => retry_policy.retry_on_connection_failure
     Timeout(_, _) => retry_policy.retry_on_timeout
     ServiceRejected(_, _, _, failure_class) =>
-      retry_policy.retry_on_transient_failure &&
-      failure_class == FailureClass::Transient
+      retry_policy.retry_on_transient_failure && failure_class == Transient
     _ => false
   }
 }
@@ -1133,7 +1132,7 @@ fn dot_stuff_message(message : String) -> String {
 
 ///|
 fn dot_stuff_chunk(text : String, at_line_start : Bool) -> (String, Bool) {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut line_start = at_line_start
   for ch in text.iter() {
     if line_start && ch == '.' {
@@ -1154,8 +1153,8 @@ fn smtp_tls_trust_to_async(
   trust : SmtpTlsTrust,
 ) -> @moonbitlang/async/tls.TrustedRoot {
   match trust {
-    SystemRoot => @tls.SystemRoot
-    InsecureNoVerify => @tls.NoVerification
-    CustomPemFile(path) => @tls.CustomPemFile(path)
+    SystemRoot => SystemRoot
+    InsecureNoVerify => NoVerification
+    CustomPemFile(path) => CustomPemFile(path)
   }
 }

@@ -8,8 +8,8 @@ fn[T, E] guard_ok(result : Result[T, E]) -> T {
 
 ///|
 fn[T] expect_transport_error(
-  result : Result[T, TransportError],
-  expected : TransportError,
+  result : Result[T, @transport.TransportError],
+  expected : @transport.TransportError,
 ) -> Unit {
   match result {
     Ok(_) => abort("expected transport error")
@@ -47,7 +47,7 @@ fn sample_message() -> (@core.Envelope, @core.Message, String) {
 /// that distinguish explicit envelope handling from message headers.
 test "fake transport records envelope and encoded message" {
   let (envelope, _, encoded) = sample_message()
-  let transport = FakeTransport::new()
+  let transport = @transport.FakeTransport::new()
   let outcome = guard_ok(transport.send(envelope, encoded))
   assert_true(outcome.accepted == envelope.rcpt_to)
   assert_true(outcome.rejected.is_empty())
@@ -64,7 +64,7 @@ async test "file transport writes eml artifacts for inspection" {
       @async.protect_from_cancel(() => @fs.rmdir(root_dir, recursive=true))
     }
     let (envelope, _, encoded) = sample_message()
-    let transport = FileTransport::new(root_dir)
+    let transport = @transport.FileTransport::new(root_dir)
     let outcome = guard_ok(transport.send(envelope, encoded))
     let artifact_path = root_dir + "/message-0001.eml"
     let disk_content = @fs.read_file(artifact_path).text()
@@ -84,9 +84,9 @@ async test "file transport surfaces io failures as transport errors" {
       @async.protect_from_cancel(() => @fs.rmdir(root_dir, recursive=true))
     }
     let blocker = root_dir + "/blocker"
-    @fs.write_file(blocker, "not a directory", create_mode=@fs.CreateOrTruncate)
+    @fs.write_file(blocker, "not a directory", create_mode=CreateOrTruncate)
     let (envelope, _, encoded) = sample_message()
-    let transport = FileTransport::new(blocker)
+    let transport = @transport.FileTransport::new(blocker)
     match transport.send(envelope, encoded) {
       Ok(_) => abort("expected file transport io failure")
       Err(IoFailure(message)) => assert_true(message != "")
@@ -106,7 +106,7 @@ async test "file transport send_message supports file-backed attachments" {
     @fs.write_file(
       attachment_path,
       "streamed attachment",
-      create_mode=@fs.CreateOrTruncate,
+      create_mode=CreateOrTruncate,
     )
     let from = guard_ok(@core.Mailbox::address_only("sender@example.com"))
     let to = guard_ok(@core.Mailbox::address_only("reader@example.com"))
@@ -131,7 +131,7 @@ async test "file transport send_message supports file-backed attachments" {
       ),
     )
     let envelope = guard_ok(@core.Envelope::new(from, [to]))
-    let transport = FileTransport::new(root_dir + "/outbox")
+    let transport = @transport.FileTransport::new(root_dir + "/outbox")
     let outcome = guard_ok(transport.send_message(envelope, message))
     let disk_content = @fs.read_file(root_dir + "/outbox/message-0001.eml").text()
     assert_true(outcome.accepted == [to])
@@ -157,7 +157,7 @@ test "smtp send uses explicit envelope instead of inferring from headers" {
     ),
   )
   let envelope = guard_ok(@core.Envelope::new(from, [hidden]))
-  let transport = StubSmtpTransport::new()
+  let transport = @transport.StubSmtpTransport::new()
   let outcome = guard_ok(transport.send_message(envelope, message))
   assert_true(outcome.accepted == [hidden])
   assert_true(transport.attempts().length() == 1)
@@ -178,25 +178,25 @@ test "surface partial recipient acceptance in the result model" {
   let envelope = guard_ok(
     @core.Envelope::new(from, [accepted, rejected, unsent]),
   )
-  let planned = DeliveryOutcome::partial(
+  let planned = @transport.DeliveryOutcome::partial(
     [accepted],
     [rejected],
     [unsent],
     "450 mailbox busy",
   )
-  let transport = StubSmtpTransport::new(planned_outcomes=[planned])
+  let transport = @transport.StubSmtpTransport::new(planned_outcomes=[planned])
   let outcome = guard_ok(transport.send(envelope, "raw message"))
   assert_true(outcome.accepted == [accepted])
   assert_true(outcome.rejected == [rejected])
   assert_true(outcome.unsent == [unsent])
   assert_true(outcome.response == "450 mailbox busy")
-  assert_true(outcome.failure_class == Some(FailureClass::Transient))
+  assert_true(outcome.failure_class == Some(Transient))
 }
 
 ///|
 test "reuse pooled smtp connections across messages" {
   let (envelope, _, encoded) = sample_message()
-  let transport = StubSmtpTransport::new(pool_size=1)
+  let transport = @transport.StubSmtpTransport::new(pool_size=1)
   ignore(guard_ok(transport.send(envelope, encoded)))
   ignore(guard_ok(transport.send(envelope, encoded)))
   assert_true(transport.attempts().length() == 2)
@@ -207,10 +207,7 @@ test "reuse pooled smtp connections across messages" {
 ///|
 test "close transport gracefully and reject sends after shutdown" {
   let (envelope, _, encoded) = sample_message()
-  let transport = FakeTransport::new()
+  let transport = @transport.FakeTransport::new()
   transport.close()
-  expect_transport_error(
-    transport.send(envelope, encoded),
-    TransportError::ClosedTransport,
-  )
+  expect_transport_error(transport.send(envelope, encoded), ClosedTransport)
 }

@@ -64,10 +64,10 @@ fn SmtpTranscript::new() -> SmtpTranscript {
 ///|
 fn scenario_with_auth(auth_mode : FakeAuthMode) -> ConnectionScenario {
   let ehlo_lines = match auth_mode {
-    FakeAuthMode::None => ["localhost"]
-    FakeAuthMode::Plain => ["localhost", "AUTH PLAIN"]
-    FakeAuthMode::Login => ["localhost", "AUTH LOGIN PLAIN XOAUTH2"]
-    FakeAuthMode::Xoauth2 => ["localhost", "AUTH XOAUTH2 PLAIN"]
+    None => ["localhost"]
+    Plain => ["localhost", "AUTH PLAIN"]
+    Login => ["localhost", "AUTH LOGIN PLAIN XOAUTH2"]
+    Xoauth2 => ["localhost", "AUTH XOAUTH2 PLAIN"]
   }
   {
     ehlo_lines,
@@ -82,7 +82,9 @@ fn scenario_with_auth(auth_mode : FakeAuthMode) -> ConnectionScenario {
 }
 
 ///|
-fn guard_some_capabilities(value : SmtpCapabilities?) -> SmtpCapabilities {
+fn guard_some_capabilities(
+  value : @transport.SmtpCapabilities?,
+) -> @transport.SmtpCapabilities {
   match value {
     Some(capabilities) => capabilities
     None => abort("expected negotiated capabilities")
@@ -228,15 +230,13 @@ async fn handle_fake_smtp_connection(
           write_multiline_response(conn, scenario.ehlo_lines)
         } else if line.has_prefix("HELO ") {
           conn.write("250 localhost\r\n")
-        } else if line.has_prefix("AUTH PLAIN ") &&
-          scenario.auth_mode == FakeAuthMode::Plain {
+        } else if line.has_prefix("AUTH PLAIN ") && scenario.auth_mode == Plain {
           conn.write("235 authenticated\r\n")
-        } else if line == "AUTH LOGIN" &&
-          scenario.auth_mode == FakeAuthMode::Login {
+        } else if line == "AUTH LOGIN" && scenario.auth_mode == Login {
           login_stage = 1
           conn.write("334 VXNlcm5hbWU6\r\n")
         } else if line.has_prefix("AUTH XOAUTH2 ") &&
-          scenario.auth_mode == FakeAuthMode::Xoauth2 {
+          scenario.auth_mode == Xoauth2 {
           conn.write("235 authenticated\r\n")
         } else if line.has_prefix("AUTH ") {
           conn.write("535 authentication failed\r\n")
@@ -279,17 +279,17 @@ async fn handle_fake_smtp_connection(
 ///|
 async test "real smtp transport sends a message over tcp" {
   let transcript = SmtpTranscript::new()
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port,
-    auth=SmtpAuth::Plain("user", "pass"),
+    auth=Plain("user", "pass"),
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
       run_fake_smtp_server(smtp_test_port, transcript, [
-        scenario_with_auth(FakeAuthMode::Plain),
+        scenario_with_auth(Plain),
       ])
     })
     @async.sleep(20)
@@ -317,12 +317,9 @@ async test "real smtp transport reports partial recipient rejection" {
     @core.Envelope::new(from, [accepted, rejected]),
   )
   let encoded = "Subject: hi\r\n\r\nbody"
-  let config = SmtpConfig::new("127.0.0.1", smtp_test_port + 1)
-  let transport = SmtpTransport::new(config)
-  let scenario = {
-    ..scenario_with_auth(FakeAuthMode::None),
-    reject_second_recipient: true,
-  }
+  let config = @transport.SmtpConfig::new("127.0.0.1", smtp_test_port + 1)
+  let transport = @transport.SmtpTransport::new(config)
+  let scenario = { ..scenario_with_auth(None), reject_second_recipient: true, }
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
       run_fake_smtp_server(smtp_test_port + 1, transcript, [scenario])
@@ -331,7 +328,7 @@ async test "real smtp transport reports partial recipient rejection" {
     let outcome = transport.send(envelope, encoded)
     assert_true(outcome.accepted == [accepted])
     assert_true(outcome.rejected == [rejected])
-    assert_true(outcome.failure_class == Some(FailureClass::Permanent))
+    assert_true(outcome.failure_class == Some(Permanent))
     transport.close()
   }
 }
@@ -339,18 +336,18 @@ async test "real smtp transport reports partial recipient rejection" {
 ///|
 async test "real smtp transport reuses an authenticated connection" {
   let transcript = SmtpTranscript::new()
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 2,
-    auth=SmtpAuth::Plain("user", "pass"),
+    auth=Plain("user", "pass"),
     reuse_connection=true,
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
       run_fake_smtp_server(smtp_test_port + 2, transcript, [
-        scenario_with_auth(FakeAuthMode::Plain),
+        scenario_with_auth(Plain),
       ])
     })
     @async.sleep(20)
@@ -372,7 +369,7 @@ async test "real smtp transport models capabilities and supports login auth" {
     ehlo_lines: [
       "localhost", "PIPELINING", "8BITMIME", "SIZE 12345", "STARTTLS", "AUTH LOGIN PLAIN XOAUTH2",
     ],
-    auth_mode: FakeAuthMode::Login,
+    auth_mode: Login,
     reject_second_recipient: false,
     greet_delay_ms: 0,
     mail_from_delay_ms: 0,
@@ -380,12 +377,12 @@ async test "real smtp transport models capabilities and supports login auth" {
     close_before_mail_from_response: false,
     close_after_data_command: false,
   }
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 3,
-    auth=SmtpAuth::Login("user", "pass"),
+    auth=Login("user", "pass"),
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
@@ -400,9 +397,9 @@ async test "real smtp transport models capabilities and supports login auth" {
   assert_true(capabilities.supports_8bitmime)
   assert_true(capabilities.supports_starttls)
   assert_true(capabilities.max_message_size == Some(12345))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Plain))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Login))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Xoauth2))
+  assert_true(capabilities.supports_auth(Plain))
+  assert_true(capabilities.supports_auth(Login))
+  assert_true(capabilities.supports_auth(Xoauth2))
   assert_true(transcript.lines[1] == "AUTH LOGIN")
   assert_true(transcript.lines[2] == @base64.encode(@utf8.encode("user")))
   assert_true(transcript.lines[3] == @base64.encode(@utf8.encode("pass")))
@@ -411,17 +408,17 @@ async test "real smtp transport models capabilities and supports login auth" {
 ///|
 async test "real smtp transport supports xoauth2 auth" {
   let transcript = SmtpTranscript::new()
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 4,
-    auth=SmtpAuth::Xoauth2("user@example.com", "oauth-token"),
+    auth=Xoauth2("user@example.com", "oauth-token"),
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
       run_fake_smtp_server(smtp_test_port + 4, transcript, [
-        scenario_with_auth(FakeAuthMode::Xoauth2),
+        scenario_with_auth(Xoauth2),
       ])
     })
     @async.sleep(20)
@@ -436,16 +433,16 @@ async test "real smtp transport rejects concurrent send on the same instance" {
   let transcript = SmtpTranscript::new()
   let mail_from_seen = @async.Semaphore(1, initial_value=0)
   let scenario = {
-    ..scenario_with_auth(FakeAuthMode::Plain),
+    ..scenario_with_auth(Plain),
     mail_from_delay_ms: 200,
     mail_from_seen: Some(mail_from_seen),
   }
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 5,
-    auth=SmtpAuth::Plain("user", "pass"),
+    auth=Plain("user", "pass"),
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
@@ -458,7 +455,7 @@ async test "real smtp transport rejects concurrent send on the same instance" {
       ignore(transport.send(envelope, encoded))
       abort("expected BusyTransport")
     } catch {
-      SmtpClientError::BusyTransport => ()
+      @transport.SmtpClientError::BusyTransport => ()
       _ => abort("expected BusyTransport")
     }
     let outcome = first_send.wait()
@@ -476,23 +473,23 @@ async test "independent smtp transports can progress concurrently" {
   let second_mail_from_seen = @async.Semaphore(1, initial_value=0)
   let scenarios = [
     {
-      ..scenario_with_auth(FakeAuthMode::Plain),
+      ..scenario_with_auth(Plain),
       mail_from_delay_ms: 200,
       mail_from_seen: Some(first_mail_from_seen),
     },
     {
-      ..scenario_with_auth(FakeAuthMode::Plain),
+      ..scenario_with_auth(Plain),
       mail_from_delay_ms: 200,
       mail_from_seen: Some(second_mail_from_seen),
     },
   ]
-  let config = SmtpConfig::new(
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 8,
-    auth=SmtpAuth::Plain("user", "pass"),
+    auth=Plain("user", "pass"),
   )
-  let transport1 = SmtpTransport::new(config)
-  let transport2 = SmtpTransport::new(config)
+  let transport1 = @transport.SmtpTransport::new(config)
+  let transport2 = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
@@ -518,17 +515,20 @@ async test "independent smtp transports can progress concurrently" {
 async test "real smtp transport retries connection failures before DATA" {
   let transcript = SmtpTranscript::new()
   let first = {
-    ..scenario_with_auth(FakeAuthMode::None),
+    ..scenario_with_auth(None),
     close_before_mail_from_response: true,
   }
-  let second = scenario_with_auth(FakeAuthMode::None)
-  let config = SmtpConfig::new(
+  let second = scenario_with_auth(None)
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 6,
-    retry_policy=SmtpRetryPolicy::new(max_retries=1, retry_delay_ms=0),
+    retry_policy=@transport.SmtpRetryPolicy::new(
+      max_retries=1,
+      retry_delay_ms=0,
+    ),
     reuse_connection=false,
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
@@ -545,18 +545,18 @@ async test "real smtp transport retries connection failures before DATA" {
 ///|
 async test "real smtp transport does not retry once DATA has started" {
   let transcript = SmtpTranscript::new()
-  let first = {
-    ..scenario_with_auth(FakeAuthMode::None),
-    close_after_data_command: true,
-  }
-  let second = scenario_with_auth(FakeAuthMode::None)
-  let config = SmtpConfig::new(
+  let first = { ..scenario_with_auth(None), close_after_data_command: true, }
+  let second = scenario_with_auth(None)
+  let config = @transport.SmtpConfig::new(
     "127.0.0.1",
     smtp_test_port + 7,
-    retry_policy=SmtpRetryPolicy::new(max_retries=1, retry_delay_ms=0),
+    retry_policy=@transport.SmtpRetryPolicy::new(
+      max_retries=1,
+      retry_delay_ms=0,
+    ),
     reuse_connection=false,
   )
-  let transport = SmtpTransport::new(config)
+  let transport = @transport.SmtpTransport::new(config)
   let (envelope, _, encoded) = sample_message_native()
   @async.with_task_group() <| root => {
     root.spawn_bg(async fn() {
@@ -567,8 +567,8 @@ async test "real smtp transport does not retry once DATA has started" {
       ignore(transport.send(envelope, encoded))
       abort("expected connection failure after DATA")
     } catch {
-      SmtpClientError::ProtocolError(_) => ()
-      SmtpClientError::ConnectionFailure(_, _) => ()
+      @transport.SmtpClientError::ProtocolError(_) => ()
+      @transport.SmtpClientError::ConnectionFailure(_, _) => ()
       _ => abort("unexpected error")
     }
     transport.close()

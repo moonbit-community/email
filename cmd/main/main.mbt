@@ -1,25 +1,21 @@
 ///|
 fn cli_command() -> @argparse.Command {
-  @argparse.Command(
+  Command(
     "send-qq-email",
     about="Send a test email through QQ SMTP over TLS.",
     version="0.1.0",
     arg_required_else_help=true,
     options=[
-      @argparse.OptionArg("sender", about="QQ sender address", required=true),
-      @argparse.OptionArg("recipient", about="Recipient address", required=true),
-      @argparse.OptionArg(
-        "auth-code",
-        about="QQ SMTP authorization code",
-        required=true,
-      ),
-      @argparse.OptionArg("subject", about="Message subject", default_values=[
+      OptionArg("sender", about="QQ sender address", required=true),
+      OptionArg("recipient", about="Recipient address", required=true),
+      OptionArg("auth-code", about="QQ SMTP authorization code", required=true),
+      OptionArg("subject", about="Message subject", default_values=[
         "MoonBit QQ SMTP test",
       ]),
-      @argparse.OptionArg("body", about="Plain text body", default_values=[
+      OptionArg("body", about="Plain text body", default_values=[
         "This message was sent by nexacodes/email cmd/main.",
       ]),
-      @argparse.OptionArg(
+      OptionArg(
         "attachment",
         about="Attachment file path, can be repeated",
         action=Append,
@@ -161,8 +157,8 @@ async fn main {
   let config = @transport.SmtpConfig::new(
     "smtp.qq.com",
     465,
-    security=@transport.SmtpSecurity::Tls,
-    auth=@transport.SmtpAuth::Plain(sender_address, auth_code),
+    security=Tls,
+    auth=Plain(sender_address, auth_code),
   )
   let transport = @transport.SmtpTransport::new(config)
 

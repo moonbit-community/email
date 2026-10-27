@@ -156,11 +156,7 @@ pub async fn FileTransport::send(
     if !@fs.exists(self.root_dir) {
       @fs.mkdir(self.root_dir, recursive=true)
     }
-    @fs.write_file(
-      artifact_path,
-      encoded_message,
-      create_mode=@fs.CreateOrTruncate,
-    )
+    @fs.write_file(artifact_path, encoded_message, create_mode=CreateOrTruncate)
   } catch {
     err => return Err(IoFailure(err.to_string()))
   }
@@ -188,8 +184,8 @@ pub async fn FileTransport::send_message(
       format_artifact_name(self.next_index)
     let file = @fs.open(
       artifact_path,
-      mode=@fs.WriteOnly,
-      create_mode=@fs.CreateOrTruncate,
+      mode=WriteOnly,
+      create_mode=CreateOrTruncate,
     )
     defer file.close()
     @codec.write_to(FileMimeWriter::{ file, }, message)

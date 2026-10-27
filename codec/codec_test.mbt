@@ -14,7 +14,7 @@ test "serialize plain text message to rfc5322 output" {
       [],
     ),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(encoded.contains("From: Sender <sender@example.com>\r\n"))
   assert_true(encoded.contains("To: reader@example.com\r\n"))
   assert_true(encoded.contains("Subject: Greetings\r\n"))
@@ -35,7 +35,7 @@ test "serialize multipart alternative with deterministic boundary policy" {
   let message = guard_ok(
     @core.Message::new(from, [to], [], [], "Multipart", body, []),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(
     encoded.contains(
       "Content-Type: multipart/alternative; boundary=\"moonbit-email-boundary-root\"\r\n",
@@ -62,7 +62,7 @@ test "encode non-ascii headers and text bodies" {
       [],
     ),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(
     encoded.contains("From: =?UTF-8?B?5pyI5YWU?= <sender@example.com>\r\n"),
   )
@@ -89,7 +89,7 @@ test "omit bcc from encoded output by default" {
       [],
     ),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(!encoded.contains("Bcc:"))
   assert_true(encoded.contains("To: reader@example.com\r\n"))
 }
@@ -113,7 +113,7 @@ test "serialize attachment and inline asset headers and payloads" {
   let message = guard_ok(
     @core.Message::new(from, [to], [], [], "Assets", body, []),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(encoded.contains("Content-Id: <logo>\r\n"))
   assert_true(
     encoded.contains("Content-Disposition: inline; filename=\"logo.png\"\r\n"),
@@ -142,7 +142,7 @@ test "encode non-ascii attachment filenames with RFC2231 parameters" {
       [],
     ),
   )
-  let encoded = to_rfc5322(message)
+  let encoded = @codec.to_rfc5322(message)
   assert_true(
     encoded.contains(
       "Content-Disposition: attachment; filename*=UTF-8''%E6%8A%A5%E5%91%8A.txt\r\n",
@@ -158,18 +158,14 @@ async test "render file-backed attachments without loading them into the model" 
       @async.protect_from_cancel(() => @fs.rmdir(root_dir, recursive=true))
     }
     let path = root_dir + "/report.txt"
-    @fs.write_file(
-      path,
-      "streamed attachment",
-      create_mode=@fs.CreateOrTruncate,
-    )
+    @fs.write_file(path, "streamed attachment", create_mode=CreateOrTruncate)
     let from = guard_ok(@core.Mailbox::address_only("sender@example.com"))
     let to = guard_ok(@core.Mailbox::address_only("reader@example.com"))
     let attachment = guard_ok(
       @core.Body::attachment_file(
         "report.txt",
         path,
-        content_type=infer_content_type("report.txt"),
+        content_type=@codec.infer_content_type("report.txt"),
       ),
     )
     let body = guard_ok(
@@ -178,7 +174,7 @@ async test "render file-backed attachments without loading them into the model" 
     let message = guard_ok(
       @core.Message::new(from, [to], [], [], "Stream", body, []),
     )
-    let encoded = render_to_rfc5322(message)
+    let encoded = @codec.render_to_rfc5322(message)
     assert_true(encoded.contains("Content-Type: text/plain\r\n"))
     assert_true(encoded.contains("c3RyZWFtZWQgYXR0YWNobWVudA=="))
   }
@@ -200,22 +196,22 @@ test "roundtrip eml parse and serialize for supported messages" {
       [guard_ok(@core.Header::new("X-Trace", "one"))],
     ),
   )
-  let encoded = to_rfc5322(message)
-  let parsed = parse_rfc5322(encoded, mode=Strict) catch {
+  let encoded = @codec.to_rfc5322(message)
+  let parsed = @codec.parse_rfc5322(encoded, mode=Strict) catch {
     _ => abort("expected message to parse")
   }
-  let reencoded = to_rfc5322(parsed)
+  let reencoded = @codec.to_rfc5322(parsed)
   assert_true(reencoded == encoded)
 }
 
 ///|
 test "lenient parser accepts LF-only line endings while strict parser rejects them" {
   let eml = "From: sender@example.com\nTo: reader@example.com\nSubject: Hi\n\nHello"
-  let parsed = parse_rfc5322(eml, mode=Lenient) catch {
+  let parsed = @codec.parse_rfc5322(eml, mode=Lenient) catch {
     _ => abort("expected lenient parse success")
   }
   assert_true(parsed.subject == "Hi")
-  try parse_rfc5322(eml, mode=Strict) catch {
+  try @codec.parse_rfc5322(eml, mode=Strict) catch {
     _ => ()
   } noraise {
     _ => abort("expected strict parse failure")

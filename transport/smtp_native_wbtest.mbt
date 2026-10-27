@@ -20,16 +20,16 @@ test "parse smtp capabilities and retry boundaries helpers" {
   assert_true(capabilities.supports_8bitmime)
   assert_true(capabilities.supports_starttls)
   assert_true(capabilities.max_message_size == Some(4096))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Plain))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Login))
-  assert_true(capabilities.supports_auth(SmtpAuthMechanism::Xoauth2))
+  assert_true(capabilities.supports_auth(Plain))
+  assert_true(capabilities.supports_auth(Login))
+  assert_true(capabilities.supports_auth(Xoauth2))
 
   let progress = SendProgress::{ data_started: false, }
   let retry_policy = SmtpRetryPolicy::new(max_retries=1, retry_delay_ms=0)
   assert_true(
     should_retry_send(
       retry_policy,
-      ConnectionFailure(SmtpPhase::MailFrom, "closed"),
+      ConnectionFailure(MailFrom, "closed"),
       progress,
       0,
     ),
@@ -38,7 +38,7 @@ test "parse smtp capabilities and retry boundaries helpers" {
   assert_true(
     !should_retry_send(
       retry_policy,
-      ConnectionFailure(SmtpPhase::FinalResponse, "closed"),
+      ConnectionFailure(FinalResponse, "closed"),
       progress,
       0,
     ),
@@ -48,13 +48,11 @@ test "parse smtp capabilities and retry boundaries helpers" {
 ///|
 async test "execute_phase maps timeout into smtp timeout error" {
   try {
-    ignore(
-      execute_phase(SmtpPhase::MailFrom, 30, async fn() { @async.sleep(100) }),
-    )
+    ignore(execute_phase(MailFrom, 30, async fn() { @async.sleep(100) }))
     abort("expected timeout")
   } catch {
     Timeout(phase, timeout_ms) => {
-      assert_true(phase == SmtpPhase::MailFrom)
+      assert_true(phase == MailFrom)
       assert_true(timeout_ms == 30)
     }
     _ => abort("expected smtp timeout")
