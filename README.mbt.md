@@ -113,7 +113,10 @@ If you want to send that style of message in one step, use `send_mixed`.
 For unit tests, use `FakeTransport`:
 
 ```moonbit nocheck
+///|
 let transport = FakeTransport::new()
+
+///|
 let outcome = transport.send_message(envelope, message) |> must_ok
 ```
 

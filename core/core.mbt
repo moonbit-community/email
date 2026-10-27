@@ -141,7 +141,7 @@ pub fn ContentType::new(
   sub_type : String,
   parameters : Array[HeaderParam],
 ) -> ContentType {
-  ContentType::{ top_level, sub_type, parameters }
+  ContentType::{ top_level, sub_type, parameters, }
 }
 
 ///|
@@ -246,7 +246,7 @@ pub fn AttachmentSource::file_path(path : String) -> AttachmentSource {
 
 ///|
 pub fn HeaderParam::new(name : String, value : String) -> HeaderParam {
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -262,11 +262,11 @@ pub fn ContentId::new(value : String) -> Result[ContentId, ValidationError] {
 pub fn ContentDisposition::new(
   kind : DispositionKind,
   filename? : String,
-  parameters? : Array[HeaderParam] = [],
+  parameters~ : Array[HeaderParam] = [],
 ) -> Result[ContentDisposition, ValidationError] {
   match filename {
     Some(name) if name == "" => Err(EmptyFilename)
-    _ => Ok({ kind, filename, parameters })
+    _ => Ok({ kind, filename, parameters, })
   }
 }
 
@@ -278,7 +278,7 @@ pub fn Header::new(
   match validate_header_name(name) {
     Ok(_) =>
       match validate_header_value(value) {
-        Ok(_) => Ok(Header::{ name, value })
+        Ok(_) => Ok(Header::{ name, value, })
         Err(error) => Err(error)
       }
     Err(error) => Err(error)
@@ -291,7 +291,7 @@ pub fn Mailbox::new(
   display_name : String?,
 ) -> Result[Mailbox, ValidationError] {
   match validate_address(address) {
-    Ok(_) => Ok(Mailbox::{ display_name, address })
+    Ok(_) => Ok(Mailbox::{ display_name, address, })
     Err(error) => Err(error)
   }
 }
@@ -330,7 +330,7 @@ pub fn Body::text(
   transfer_encoding : TransferEncoding,
   content : String,
 ) -> Body {
-  Text(TextBody::{ content_type, charset, transfer_encoding, content })
+  Text(TextBody::{ content_type, charset, transfer_encoding, content, })
 }
 
 ///|
@@ -367,7 +367,7 @@ pub fn Body::inline_asset(
 pub fn Body::attachment_file(
   filename : String,
   path : String,
-  content_type? : ContentType = ContentType::application_octet_stream(),
+  content_type~ : ContentType = ContentType::application_octet_stream(),
 ) -> Result[Body, ValidationError] {
   make_binary_body(
     filename,
@@ -457,7 +457,7 @@ pub fn Message::new(
   if to.is_empty() && cc.is_empty() && bcc.is_empty() {
     return Err(EmptyMessageRecipients)
   }
-  Ok(Message::{ from, to, cc, bcc, subject, headers, body })
+  Ok(Message::{ from, to, cc, bcc, subject, headers, body, })
 }
 
 ///|
@@ -484,7 +484,7 @@ pub fn Envelope::new(
   if normalized.is_empty() {
     return Err(EmptyRecipients)
   }
-  Ok(Envelope::{ mail_from, rcpt_to: normalized })
+  Ok(Envelope::{ mail_from, rcpt_to: normalized, })
 }
 
 ///|

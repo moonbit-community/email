@@ -34,6 +34,5 @@ pub(all) enum MimeMode {
 
 // Traits
 pub(open) trait MimeWriter {
-  async write_text(Self, String) -> Unit
+  async fn write_text(Self, String) -> Unit
 }
-

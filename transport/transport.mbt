@@ -35,7 +35,7 @@ pub struct FileArtifact {
 pub struct SmtpAttempt {
   envelope : @core.Envelope
   encoded_message : String
-  connection_id : Int
+  connection_id : Int32
   trace : Array[String]
 } derive(Eq, Debug)
 
@@ -49,24 +49,24 @@ pub struct FakeTransport {
 pub struct FileTransport {
   root_dir : String
   artifacts : Array[FileArtifact]
-  mut next_index : Int
+  mut next_index : Int32
   mut closed : Bool
 } derive(Debug)
 
 ///|
 pub struct StubSmtpTransport {
-  pool_size : Int
+  pool_size : Int32
   planned_outcomes : Array[DeliveryOutcome]
-  mut next_plan_index : Int
+  mut next_plan_index : Int32
   attempts : Array[SmtpAttempt]
-  mut send_count : Int
+  mut send_count : Int32
   mut closed : Bool
 } derive(Debug)
 
 ///|
 pub fn DeliveryOutcome::all_accepted(
   recipients : Array[@core.Mailbox],
-  response? : String = "250 OK",
+  response~ : String = "250 OK",
 ) -> DeliveryOutcome {
   {
     accepted: recipients,
@@ -85,12 +85,12 @@ pub fn DeliveryOutcome::partial(
   response : String,
 ) -> DeliveryOutcome {
   let failure_class = derive_failure_class(accepted, rejected, unsent, response)
-  { accepted, rejected, unsent, response, failure_class }
+  { accepted, rejected, unsent, response, failure_class, }
 }
 
 ///|
 pub fn FakeTransport::new() -> FakeTransport {
-  { records: [], closed: false }
+  { records: [], closed: false, }
 }
 
 ///|
@@ -102,7 +102,7 @@ pub fn FakeTransport::send(
   if self.closed {
     return Err(ClosedTransport)
   }
-  self.records.push({ envelope, encoded_message })
+  self.records.push({ envelope, encoded_message, })
   Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
 }
 
@@ -127,7 +127,7 @@ pub fn FakeTransport::records(self : FakeTransport) -> Array[DeliveryRecord] {
 
 ///|
 pub fn FileTransport::new(root_dir : String) -> FileTransport {
-  { root_dir, artifacts: [], next_index: 0, closed: false }
+  { root_dir, artifacts: [], next_index: 0, closed: false, }
 }
 
 ///|
@@ -136,7 +136,7 @@ priv struct FileMimeWriter {
 }
 
 ///|
-impl @codec.MimeWriter for FileMimeWriter with write_text(self, text) {
+impl @codec.MimeWriter for FileMimeWriter with fn write_text(self, text) {
   self.file.write(text)
 }
 
@@ -164,7 +164,7 @@ pub async fn FileTransport::send(
   } catch {
     err => return Err(IoFailure(err.to_string()))
   }
-  let artifact = { path: artifact_path, content: encoded_message }
+  let artifact = { path: artifact_path, content: encoded_message, }
   self.next_index += 1
   self.artifacts.push(artifact)
   Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
@@ -195,7 +195,7 @@ pub async fn FileTransport::send_message(
     @codec.write_to(FileMimeWriter::{ file, }, message)
     let encoded = @fs.read_file(artifact_path).text()
     self.next_index += 1
-    self.artifacts.push({ path: artifact_path, content: encoded })
+    self.artifacts.push({ path: artifact_path, content: encoded, })
     Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
   } catch {
     err => Err(IoFailure(err.to_string()))
@@ -214,8 +214,8 @@ pub fn FileTransport::artifacts(self : FileTransport) -> Array[FileArtifact] {
 
 ///|
 pub fn StubSmtpTransport::new(
-  pool_size? : Int = 1,
-  planned_outcomes? : Array[DeliveryOutcome] = [],
+  pool_size~ : Int32 = 1,
+  planned_outcomes~ : Array[DeliveryOutcome] = [],
 ) -> StubSmtpTransport {
   let normalized_pool = if pool_size < 1 { 1 } else { pool_size }
   {
@@ -239,7 +239,7 @@ pub fn StubSmtpTransport::send(
   }
   let connection_id = assign_connection_id(self.send_count, self.pool_size)
   let trace = build_smtp_trace(envelope)
-  self.attempts.push({ envelope, encoded_message, connection_id, trace })
+  self.attempts.push({ envelope, encoded_message, connection_id, trace, })
   self.send_count += 1
   Ok(self.next_outcome(envelope))
 }
@@ -280,7 +280,7 @@ fn StubSmtpTransport::next_outcome(
 }
 
 ///|
-fn format_artifact_name(index : Int) -> String {
+fn format_artifact_name(index : Int32) -> String {
   let next = index + 1
   if next < 10 {
     "message-000" + next.to_string() + ".eml"
@@ -306,7 +306,7 @@ fn build_smtp_trace(envelope : @core.Envelope) -> Array[String] {
 }
 
 ///|
-fn classify_smtp_status(status : Int) -> FailureClass {
+fn classify_smtp_status(status : Int32) -> FailureClass {
   if status >= 400 && status < 500 {
     Transient
   } else {
@@ -333,7 +333,7 @@ fn derive_failure_class(
 }
 
 ///|
-fn parse_status_code(response : String) -> Int? {
+fn parse_status_code(response : String) -> Int32? {
   if response.length() < 3 {
     return None
   }
@@ -354,16 +354,16 @@ fn parse_status_code(response : String) -> Int? {
 }
 
 ///|
-fn is_ascii_digit_unit(code_unit : Int) -> Bool {
+fn is_ascii_digit_unit(code_unit : Int32) -> Bool {
   code_unit >= '0'.to_int() && code_unit <= '9'.to_int()
 }
 
 ///|
-fn digit_value_unit(code_unit : Int) -> Int {
+fn digit_value_unit(code_unit : Int32) -> Int32 {
   code_unit - '0'.to_int()
 }
 
 ///|
-fn assign_connection_id(send_index : Int, pool_size : Int) -> Int {
+fn assign_connection_id(send_index : Int32, pool_size : Int32) -> Int32 {
   send_index % pool_size
 }

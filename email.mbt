@@ -59,9 +59,9 @@ pub fn compose_message(
   to : Array[Mailbox],
   subject : String,
   body : Body,
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
 ) -> Result[Message, ValidationError] {
   Message::new(from, to, cc, bcc, subject, body, headers)
 }
@@ -72,9 +72,9 @@ pub fn compose_plain_text(
   to : Array[Mailbox],
   subject : String,
   content : String,
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
 ) -> Result[Message, ValidationError] {
   compose_message(
     from,
@@ -93,9 +93,9 @@ pub fn compose_html(
   to : Array[Mailbox],
   subject : String,
   content : String,
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
 ) -> Result[Message, ValidationError] {
   compose_message(from, to, subject, Body::html(content), cc~, bcc~, headers~)
 }
@@ -106,9 +106,9 @@ pub fn compose_mixed(
   to : Array[Mailbox],
   subject : String,
   parts : Array[Body],
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
 ) -> Result[Message, ValidationError] {
   match Body::mixed(parts) {
     Ok(body) => compose_message(from, to, subject, body, cc~, bcc~, headers~)
@@ -159,9 +159,9 @@ pub async fn send_plain_text(
   to : Array[Mailbox],
   subject : String,
   content : String,
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
   mail_from? : Mailbox,
 ) -> Result[DeliveryOutcome, ValidationError] {
   send_composed_message(
@@ -178,9 +178,9 @@ pub async fn send_html(
   to : Array[Mailbox],
   subject : String,
   content : String,
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
   mail_from? : Mailbox,
 ) -> Result[DeliveryOutcome, ValidationError] {
   send_composed_message(
@@ -197,9 +197,9 @@ pub async fn send_mixed(
   to : Array[Mailbox],
   subject : String,
   parts : Array[Body],
-  cc? : Array[Mailbox] = [],
-  bcc? : Array[Mailbox] = [],
-  headers? : Array[Header] = [],
+  cc~ : Array[Mailbox] = [],
+  bcc~ : Array[Mailbox] = [],
+  headers~ : Array[Header] = [],
   mail_from? : Mailbox,
 ) -> Result[DeliveryOutcome, ValidationError] {
   send_composed_message(

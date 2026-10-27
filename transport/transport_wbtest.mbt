@@ -21,15 +21,15 @@ test "classify transient and permanent smtp failures" {
 
 ///|
 test "preserve queue order while respecting pool capacity" {
-  let first : Array[Int] = []
+  let first : Array[Int32] = []
   for index in 0..<5 {
     first.push(assign_connection_id(index, 2))
   }
-  let second : Array[Int] = []
+  let second : Array[Int32] = []
   for index in 0..<3 {
     second.push(assign_connection_id(index, 1))
   }
-  let third : Array[Int] = []
+  let third : Array[Int32] = []
   for index in 0..<4 {
     third.push(assign_connection_id(index, 1))
   }
