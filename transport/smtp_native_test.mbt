@@ -575,3 +575,49 @@ async test "real smtp transport does not retry once DATA has started" {
   }
   assert_true(transcript.connection_count == 1)
 }
+
+///|
+async test "real smtp transport closes cancelled connections and can reconnect" {
+  let port = smtp_test_port + 9
+  let server = @socket.TcpServer::TcpServer(
+    @socket.Addr::parse("127.0.0.1:\{port}"),
+    reuse_addr=true,
+  )
+  defer server.close()
+  let transport = @transport.SmtpTransport::new(
+    @transport.SmtpConfig::new(
+      "127.0.0.1",
+      port,
+      retry_policy=@transport.SmtpRetryPolicy::new(max_retries=0),
+    ),
+  )
+  defer transport.close()
+  let (envelope, _, encoded) = sample_message_native()
+  @async.with_timeout(2_000, () => {
+    @async.with_task_group() <| group => {
+      // Cancel during hello, then during delivery, and reconnect after both.
+      for begin_delivery in [false, true, false] {
+        let sending = group.spawn(() => transport.send(envelope, encoded))
+        let (conn, _) = server.accept()
+        defer conn.close()
+        conn.write("220 localhost\r\n")
+        assert_eq(conn.read_until("\r\n"), Some("EHLO localhost"))
+        if begin_delivery {
+          conn.write("250 localhost\r\n")
+          assert_eq(
+            conn.read_until("\r\n"),
+            Some("MAIL FROM:<sender@example.com>"),
+          )
+        }
+        sending.cancel()
+        try ignore(sending.wait()) catch {
+          @async.WaitedTaskAlreadyCancelled => ()
+          err => fail("unexpected send error: \{err.to_string()}")
+        } noraise {
+          _ => fail("expected cancelled send")
+        }
+        assert_eq(conn.read_until("\r\n"), None)
+      }
+    }
+  })
+}
