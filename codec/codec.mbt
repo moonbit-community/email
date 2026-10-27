@@ -13,7 +13,7 @@ pub(all) suberror ParseError {
 
 ///|
 pub(open) trait MimeWriter {
-  async write_text(Self, String) -> Unit
+  async fn write_text(Self, String) -> Unit
 }
 
 ///|
@@ -23,11 +23,11 @@ priv struct CollectWriter {
 
 ///|
 fn CollectWriter::new() -> CollectWriter {
-  { builder: StringBuilder::new() }
+  { builder: StringBuilder::new(), }
 }
 
 ///|
-impl MimeWriter for CollectWriter with write_text(self, text) {
+impl MimeWriter for CollectWriter with fn write_text(self, text) {
   self.builder.write_string(text)
 }
 
@@ -48,7 +48,7 @@ pub fn to_rfc5322(message : @core.Message) -> String {
 ///|
 pub async fn render_to_rfc5322(
   message : @core.Message,
-  mode? : MimeMode = Strict,
+  mode~ : MimeMode = Strict,
 ) -> String {
   let writer = CollectWriter::new()
   write_to(writer, message, mode~)
@@ -59,7 +59,7 @@ pub async fn render_to_rfc5322(
 pub async fn[W : MimeWriter] write_to(
   writer : W,
   message : @core.Message,
-  mode? : MimeMode = Strict,
+  mode~ : MimeMode = Strict,
 ) -> Unit {
   write_message_headers(writer, message, mode)
   writer.write_text("\r\n")
@@ -67,7 +67,7 @@ pub async fn[W : MimeWriter] write_to(
 }
 
 ///|
-fn min_int(left : Int, right : Int) -> Int {
+fn min_int(left : Int32, right : Int32) -> Int32 {
   if left < right {
     left
   } else {
@@ -106,7 +106,7 @@ pub fn infer_content_type(filename : String) -> @core.ContentType {
 ///|
 pub fn parse_rfc5322(
   input : String,
-  mode? : MimeMode = Lenient,
+  mode~ : MimeMode = Lenient,
 ) -> @core.Message raise ParseError {
   let normalized = normalize_message_input(input, mode)
   let (raw_headers, raw_body) = split_headers_and_body(normalized)
@@ -178,7 +178,7 @@ async fn[W : MimeWriter] write_message_headers(
 fn write_body_headers_sync(
   builder : StringBuilder,
   body : @core.Body,
-  path : Array[Int],
+  path : Array[Int32],
   mode : MimeMode,
 ) -> Unit {
   for field in body_header_fields(body, path) {
@@ -191,7 +191,7 @@ fn write_body_headers_sync(
 async fn[W : MimeWriter] write_body_headers(
   writer : W,
   body : @core.Body,
-  path : Array[Int],
+  path : Array[Int32],
   mode : MimeMode,
 ) -> Unit {
   for field in body_header_fields(body, path) {
@@ -203,7 +203,7 @@ async fn[W : MimeWriter] write_body_headers(
 ///|
 fn body_header_fields(
   body : @core.Body,
-  path : Array[Int],
+  path : Array[Int32],
 ) -> Array[(String, String)] {
   match body {
     Text(text) =>
@@ -253,7 +253,7 @@ fn body_header_fields(
 fn write_body_sync(
   builder : StringBuilder,
   body : @core.Body,
-  path : Array[Int],
+  path : Array[Int32],
   mode : MimeMode,
 ) -> Unit {
   ignore(mode)
@@ -293,7 +293,7 @@ fn write_body_sync(
 async fn[W : MimeWriter] write_body(
   writer : W,
   body : @core.Body,
-  path : Array[Int],
+  path : Array[Int32],
   mode : MimeMode,
 ) -> Unit {
   ignore(mode)
@@ -399,7 +399,7 @@ fn header_line(name : String, value : String, mode : MimeMode) -> String {
 }
 
 ///|
-fn fold_header_line(line : String, max_len : Int) -> String {
+fn fold_header_line(line : String, max_len : Int32) -> String {
   if line.length() <= max_len {
     return line
   }
@@ -535,7 +535,7 @@ fn is_parameter_token(value : String) -> Bool {
   }
   for c in value.iter() {
     let code = c.to_int()
-    if !(code is ('0'..='9' | 'A'..='Z' | 'a'..='z' | '-' | '_' | '.')) {
+    if !(code is ('0'..<='9' | 'A'..<='Z' | 'a'..<='z' | '-' | '_' | '.')) {
       return false
     }
   }
@@ -559,8 +559,8 @@ fn percent_encode_utf8(value : String) -> String {
 }
 
 ///|
-fn is_attr_char(code : Int) -> Bool {
-  code is ('0'..='9' | 'A'..='Z' | 'a'..='z') ||
+fn is_attr_char(code : Int32) -> Bool {
+  code is ('0'..<='9' | 'A'..<='Z' | 'a'..<='z') ||
   code
   is ('!' | '#' | '$' | '&' | '+' | '-' | '.' | '^' | '_' | '`' | '|' | '~')
 }
@@ -689,7 +689,7 @@ fn encode_quoted_printable(content : String) -> String {
 }
 
 ///|
-fn quoted_printable_chunk(bytes : Bytes, index : Int) -> String {
+fn quoted_printable_chunk(bytes : Bytes, index : Int32) -> String {
   let byte = bytes[index]
   let value = byte.to_int()
   let is_trailing_whitespace = (byte == b' ' || byte == b'\t') &&
@@ -762,7 +762,7 @@ fn bytes_to_ascii_string(data : Array[Byte]) -> String {
 }
 
 ///|
-fn to_upper_hex(value : Int) -> String {
+fn to_upper_hex(value : Int32) -> String {
   let digits = "0123456789ABCDEF"
   let high = (value >> 4) & 15
   let low = value & 15
@@ -773,7 +773,7 @@ fn to_upper_hex(value : Int) -> String {
 }
 
 ///|
-fn boundary_for(path : Array[Int]) -> String {
+fn boundary_for(path : Array[Int32]) -> String {
   if path.is_empty() {
     "moonbit-email-boundary-root"
   } else {
@@ -782,7 +782,7 @@ fn boundary_for(path : Array[Int]) -> String {
 }
 
 ///|
-fn append_path(path : Array[Int], index : Int) -> Array[Int] {
+fn append_path(path : Array[Int32], index : Int32) -> Array[Int32] {
   let next = path.copy()
   next.push(index)
   next
@@ -1421,11 +1421,11 @@ fn decode_quoted_printable_bytes(body_text : String) -> Bytes raise ParseError {
 }
 
 ///|
-fn hex_digit(ch : Char) -> Int? {
+fn hex_digit(ch : Char) -> Int32? {
   match ch {
-    '0'..='9' => Some(ch.to_int() - '0'.to_int())
-    'A'..='F' => Some(ch.to_int() - 'A'.to_int() + 10)
-    'a'..='f' => Some(ch.to_int() - 'a'.to_int() + 10)
+    '0'..<='9' => Some(ch.to_int() - '0'.to_int())
+    'A'..<='F' => Some(ch.to_int() - 'A'.to_int() + 10)
+    'a'..<='f' => Some(ch.to_int() - 'a'.to_int() + 10)
     _ => None
   }
 }
@@ -1490,7 +1490,7 @@ fn decode_encoded_words(value : String) -> String raise ParseError {
 }
 
 ///|
-fn find_encoded_word_end(value : String, start : Int) -> Int? {
+fn find_encoded_word_end(value : String, start : Int32) -> Int32? {
   let marker = value[start:].find("?=")
   match marker {
     Some(offset) => Some(start + offset + 2)

@@ -13,7 +13,7 @@ enum FakeAuthMode {
 struct SmtpTranscript {
   lines : Array[String]
   mut data : String
-  mut connection_count : Int
+  mut connection_count : Int32
 }
 
 ///|
@@ -21,8 +21,8 @@ struct ConnectionScenario {
   ehlo_lines : Array[String]
   auth_mode : FakeAuthMode
   reject_second_recipient : Bool
-  greet_delay_ms : Int
-  mail_from_delay_ms : Int
+  greet_delay_ms : Int32
+  mail_from_delay_ms : Int32
   mail_from_seen : @async.Semaphore?
   close_before_mail_from_response : Bool
   close_after_data_command : Bool
@@ -58,7 +58,7 @@ fn sample_message_native() -> (@core.Envelope, @core.Message, String) {
 
 ///|
 fn SmtpTranscript::new() -> SmtpTranscript {
-  { lines: [], data: "", connection_count: 0 }
+  { lines: [], data: "", connection_count: 0, }
 }
 
 ///|
@@ -90,7 +90,7 @@ fn guard_some_capabilities(value : SmtpCapabilities?) -> SmtpCapabilities {
 }
 
 ///|
-fn count_prefix(lines : Array[String], prefix : String) -> Int {
+fn count_prefix(lines : Array[String], prefix : String) -> Int32 {
   let mut count = 0
   for line in lines {
     if line.has_prefix(prefix) {
@@ -117,7 +117,7 @@ async fn write_multiline_response(
 
 ///|
 async fn run_fake_smtp_server(
-  port : Int,
+  port : Int32,
   transcript : SmtpTranscript,
   scenarios : Array[ConnectionScenario],
 ) -> Unit {
@@ -130,7 +130,7 @@ async fn run_fake_smtp_server(
 
 ///|
 async fn run_fake_smtp_server_parallel(
-  port : Int,
+  port : Int32,
   transcript : SmtpTranscript,
   scenarios : Array[ConnectionScenario],
 ) -> Unit {

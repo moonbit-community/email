@@ -24,7 +24,7 @@ test "parse smtp capabilities and retry boundaries helpers" {
   assert_true(capabilities.supports_auth(SmtpAuthMechanism::Login))
   assert_true(capabilities.supports_auth(SmtpAuthMechanism::Xoauth2))
 
-  let progress = SendProgress::{ data_started: false }
+  let progress = SendProgress::{ data_started: false, }
   let retry_policy = SmtpRetryPolicy::new(max_retries=1, retry_delay_ms=0)
   assert_true(
     should_retry_send(

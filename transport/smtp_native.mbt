@@ -45,17 +45,17 @@ pub(all) enum SmtpTlsTrust {
 
 ///|
 pub struct SmtpTimeouts {
-  connect_ms : Int
-  greeting_ms : Int
-  command_ms : Int
-  data_ms : Int
-  idle_ms : Int
+  connect_ms : Int32
+  greeting_ms : Int32
+  command_ms : Int32
+  data_ms : Int32
+  idle_ms : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct SmtpRetryPolicy {
-  max_retries : Int
-  retry_delay_ms : Int
+  max_retries : Int32
+  retry_delay_ms : Int32
   retry_on_connection_failure : Bool
   retry_on_timeout : Bool
   retry_on_transient_failure : Bool
@@ -68,13 +68,13 @@ pub struct SmtpCapabilities {
   supports_starttls : Bool
   supports_pipelining : Bool
   supports_8bitmime : Bool
-  max_message_size : Int?
+  max_message_size : Int32?
 } derive(Eq, Debug)
 
 ///|
 pub struct SmtpConfig {
   host : String
-  port : Int
+  port : Int32
   hello_name : String
   security : SmtpSecurity
   auth : SmtpAuth
@@ -88,11 +88,11 @@ pub struct SmtpConfig {
 pub suberror SmtpClientError {
   TransportClosed
   BusyTransport
-  Timeout(SmtpPhase, Int)
+  Timeout(SmtpPhase, Int32)
   ConnectionFailure(SmtpPhase, String)
   InvalidResponse(String)
-  UnexpectedStatus(Int, Int, String)
-  ServiceRejected(SmtpPhase, Int, String, FailureClass)
+  UnexpectedStatus(Int32, Int32, String)
+  ServiceRejected(SmtpPhase, Int32, String, FailureClass)
   MissingExtension(String)
   MissingAuthMechanism(SmtpAuthMechanism)
   AuthFailed(String)
@@ -128,22 +128,22 @@ priv struct SendProgress {
 
 ///|
 pub fn SmtpTimeouts::new(
-  connect_ms? : Int = 10_000,
-  greeting_ms? : Int = 10_000,
-  command_ms? : Int = 10_000,
-  data_ms? : Int = 120_000,
-  idle_ms? : Int = 60_000,
+  connect_ms~ : Int32 = 10_000,
+  greeting_ms~ : Int32 = 10_000,
+  command_ms~ : Int32 = 10_000,
+  data_ms~ : Int32 = 120_000,
+  idle_ms~ : Int32 = 60_000,
 ) -> SmtpTimeouts {
-  { connect_ms, greeting_ms, command_ms, data_ms, idle_ms }
+  { connect_ms, greeting_ms, command_ms, data_ms, idle_ms, }
 }
 
 ///|
 pub fn SmtpRetryPolicy::new(
-  max_retries? : Int = 1,
-  retry_delay_ms? : Int = 250,
-  retry_on_connection_failure? : Bool = true,
-  retry_on_timeout? : Bool = true,
-  retry_on_transient_failure? : Bool = true,
+  max_retries~ : Int32 = 1,
+  retry_delay_ms~ : Int32 = 250,
+  retry_on_connection_failure~ : Bool = true,
+  retry_on_timeout~ : Bool = true,
+  retry_on_transient_failure~ : Bool = true,
 ) -> SmtpRetryPolicy {
   {
     max_retries: if max_retries < 0 {
@@ -173,14 +173,14 @@ pub fn SmtpCapabilities::supports_auth(
 ///|
 pub fn SmtpConfig::new(
   host : String,
-  port : Int,
-  hello_name? : String = "localhost",
-  security? : SmtpSecurity = Plain,
-  auth? : SmtpAuth = None,
-  tls_trust? : SmtpTlsTrust = SystemRoot,
-  timeouts? : SmtpTimeouts = SmtpTimeouts::new(),
-  retry_policy? : SmtpRetryPolicy = SmtpRetryPolicy::new(),
-  reuse_connection? : Bool = true,
+  port : Int32,
+  hello_name~ : String = "localhost",
+  security~ : SmtpSecurity = Plain,
+  auth~ : SmtpAuth = None,
+  tls_trust~ : SmtpTlsTrust = SystemRoot,
+  timeouts~ : SmtpTimeouts = SmtpTimeouts::new(),
+  retry_policy~ : SmtpRetryPolicy = SmtpRetryPolicy::new(),
+  reuse_connection~ : Bool = true,
 ) -> SmtpConfig {
   {
     host,
@@ -255,7 +255,7 @@ async fn SmtpTransport::send_payload(
 
   let mut attempt = 0
   for ;; {
-    let progress = SendProgress::{ data_started: false }
+    let progress = SendProgress::{ data_started: false, }
     try {
       self.ensure_live_connection()
       let outcome = self.deliver_with_live_connection(
@@ -346,7 +346,7 @@ async fn SmtpTransport::deliver_with_live_connection(
         Structured(message) =>
           smtp_send_message_and_data_streaming(
             session,
-            PlainSmtpDataWriter::{ session, at_line_start: true },
+            PlainSmtpDataWriter::{ session, at_line_start: true, },
             envelope,
             message,
             self.config.timeouts,
@@ -366,7 +366,7 @@ async fn SmtpTransport::deliver_with_live_connection(
         Structured(message) =>
           smtp_send_message_and_data_streaming(
             session,
-            TlsSmtpDataWriter::{ session, at_line_start: true },
+            TlsSmtpDataWriter::{ session, at_line_start: true, },
             envelope,
             message,
             self.config.timeouts,
@@ -387,7 +387,7 @@ async fn open_authenticated_connection(
         @socket.Tcp::connect_to_host(config.host, port=config.port)
       })
       try {
-        let session = PlainSmtpSession::{ io: conn }
+        let session = PlainSmtpSession::{ io: conn, }
         let capabilities = smtp_greet_and_hello(session, config, true)
         smtp_auth(session, config.auth, capabilities, config.timeouts)
         (Plain(session), capabilities)
@@ -415,7 +415,7 @@ async fn open_authenticated_connection(
         }
       }
       try {
-        let session = TlsSmtpSession::{ io: tls }
+        let session = TlsSmtpSession::{ io: tls, }
         let capabilities = smtp_greet_and_hello(session, config, true)
         smtp_auth(session, config.auth, capabilities, config.timeouts)
         (Tls(session), capabilities)
@@ -430,7 +430,7 @@ async fn open_authenticated_connection(
       let conn = execute_phase(Connect, config.timeouts.connect_ms, async fn() {
         @socket.Tcp::connect_to_host(config.host, port=config.port)
       })
-      let plain = PlainSmtpSession::{ io: conn }
+      let plain = PlainSmtpSession::{ io: conn, }
       let negotiated = smtp_greet_and_hello(plain, config, false) catch {
         err => {
           conn.close()
@@ -468,7 +468,7 @@ async fn open_authenticated_connection(
         }
       }
       try {
-        let session = TlsSmtpSession::{ io: tls }
+        let session = TlsSmtpSession::{ io: tls, }
         let capabilities = send_hello(
           session,
           config.hello_name,
@@ -513,7 +513,7 @@ fn require_auth_mechanism(
 ///|
 async fn[X] execute_phase(
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
   work : async () -> X,
 ) -> X {
   try {
@@ -539,8 +539,8 @@ async fn[X] execute_phase(
 
 ///|
 priv trait SmtpSession {
-  async read_line(Self) -> String
-  async write_text(Self, String) -> Unit
+  async fn read_line(Self) -> String
+  async fn write_text(Self, String) -> Unit
 }
 
 ///|
@@ -549,7 +549,7 @@ priv struct PlainSmtpSession {
 }
 
 ///|
-impl SmtpSession for PlainSmtpSession with read_line(self) {
+impl SmtpSession for PlainSmtpSession with fn read_line(self) {
   match self.io.read_until("\r\n") {
     Some(line) => line
     None => raise ProtocolError("connection closed while reading SMTP response")
@@ -557,7 +557,7 @@ impl SmtpSession for PlainSmtpSession with read_line(self) {
 }
 
 ///|
-impl SmtpSession for PlainSmtpSession with write_text(self, text) {
+impl SmtpSession for PlainSmtpSession with fn write_text(self, text) {
   self.io.write(text)
 }
 
@@ -567,7 +567,7 @@ priv struct TlsSmtpSession {
 }
 
 ///|
-impl SmtpSession for TlsSmtpSession with read_line(self) {
+impl SmtpSession for TlsSmtpSession with fn read_line(self) {
   match self.io.read_until("\r\n") {
     Some(line) => line
     None => raise ProtocolError("connection closed while reading SMTP response")
@@ -575,7 +575,7 @@ impl SmtpSession for TlsSmtpSession with read_line(self) {
 }
 
 ///|
-impl SmtpSession for TlsSmtpSession with write_text(self, text) {
+impl SmtpSession for TlsSmtpSession with fn write_text(self, text) {
   self.io.write(text)
 }
 
@@ -586,7 +586,7 @@ priv struct PlainSmtpDataWriter {
 }
 
 ///|
-impl @codec.MimeWriter for PlainSmtpDataWriter with write_text(self, text) {
+impl @codec.MimeWriter for PlainSmtpDataWriter with fn write_text(self, text) {
   let (stuffed, at_line_start) = dot_stuff_chunk(text, self.at_line_start)
   self.at_line_start = at_line_start
   self.session.write_text(stuffed)
@@ -599,7 +599,7 @@ priv struct TlsSmtpDataWriter {
 }
 
 ///|
-impl @codec.MimeWriter for TlsSmtpDataWriter with write_text(self, text) {
+impl @codec.MimeWriter for TlsSmtpDataWriter with fn write_text(self, text) {
   let (stuffed, at_line_start) = dot_stuff_chunk(text, self.at_line_start)
   self.at_line_start = at_line_start
   self.session.write_text(stuffed)
@@ -613,7 +613,7 @@ fn empty_capabilities() -> SmtpCapabilities {
     supports_starttls: false,
     supports_pipelining: false,
     supports_8bitmime: false,
-    max_message_size: (None : Int?),
+    max_message_size: (None : Int32?),
   }
 }
 
@@ -637,7 +637,7 @@ async fn[S : SmtpSession] send_hello(
   session : S,
   hello_name : String,
   fallback_ok : Bool,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> SmtpCapabilities {
   write_line(session, "EHLO " + hello_name, Hello, timeout_ms)
   let first_line = read_line(session, Hello, timeout_ms)
@@ -676,7 +676,7 @@ fn parse_capabilities(lines : Array[String]) -> SmtpCapabilities {
   let mut supports_starttls = false
   let mut supports_pipelining = false
   let mut supports_8bitmime = false
-  let mut max_message_size : Int? = None
+  let mut max_message_size : Int32? = None
   for line in lines {
     let normalized = line.trim().to_upper()
     if normalized == "STARTTLS" {
@@ -957,7 +957,7 @@ fn should_retry_send(
   retry_policy : SmtpRetryPolicy,
   err : Error,
   progress : SendProgress,
-  attempt : Int,
+  attempt : Int32,
 ) -> Bool {
   if progress.data_started {
     return false
@@ -979,9 +979,9 @@ fn should_retry_send(
 async fn[S : SmtpSession] send_command_expect_status(
   session : S,
   command : String,
-  expected : Int,
+  expected : Int32,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> String {
   let line = send_command_capture(session, command, phase, timeout_ms)
   let code = parse_status_code_or_raise(line)
@@ -996,7 +996,7 @@ async fn[S : SmtpSession] send_command_capture(
   session : S,
   command : String,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> String {
   write_line(session, command, phase, timeout_ms)
   read_line(session, phase, timeout_ms)
@@ -1005,9 +1005,9 @@ async fn[S : SmtpSession] send_command_capture(
 ///|
 async fn[S : SmtpSession] read_expect_status(
   session : S,
-  expected : Int,
+  expected : Int32,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> String {
   let line = read_line(session, phase, timeout_ms)
   let code = parse_status_code_or_raise(line)
@@ -1022,7 +1022,7 @@ async fn[S : SmtpSession] write_line(
   session : S,
   command : String,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Unit {
   write_text(session, command + "\r\n", phase, timeout_ms)
 }
@@ -1032,7 +1032,7 @@ async fn[S : SmtpSession] write_text(
   session : S,
   text : String,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Unit {
   execute_phase(phase, timeout_ms, async fn() { session.write_text(text) })
 }
@@ -1041,15 +1041,15 @@ async fn[S : SmtpSession] write_text(
 async fn[S : SmtpSession] read_line(
   session : S,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> String {
   execute_phase(phase, timeout_ms, async fn() { session.read_line() })
 }
 
 ///|
 fn raise_status_mismatch(
-  expected : Int,
-  actual : Int,
+  expected : Int32,
+  actual : Int32,
   line : String,
   phase : SmtpPhase,
 ) -> Unit raise {
@@ -1065,7 +1065,7 @@ async fn[S : SmtpSession] collect_multiline_response(
   session : S,
   first_line : String,
   phase : SmtpPhase,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Array[String] {
   let lines : Array[String] = []
   let mut current = first_line
@@ -1093,7 +1093,7 @@ fn parse_response_text(line : String) -> String {
 }
 
 ///|
-fn parse_status_code_or_raise(line : String) -> Int raise {
+fn parse_status_code_or_raise(line : String) -> Int32 raise {
   match parse_status_code(line) {
     Some(status) => status
     None => raise InvalidResponse(line)
@@ -1106,7 +1106,7 @@ fn format_status_line(line : String) -> String {
 }
 
 ///|
-fn parse_positive_int(text : String) -> Int? {
+fn parse_positive_int(text : String) -> Int32? {
   if text == "" {
     return None
   }
