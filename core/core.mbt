@@ -141,7 +141,7 @@ pub fn ContentType::new(
   sub_type : String,
   parameters : Array[HeaderParam],
 ) -> ContentType {
-  ContentType::{ top_level, sub_type, parameters, }
+  { top_level, sub_type, parameters, }
 }
 
 ///|
@@ -278,7 +278,7 @@ pub fn Header::new(
   match validate_header_name(name) {
     Ok(_) =>
       match validate_header_value(value) {
-        Ok(_) => Ok(Header::{ name, value, })
+        Ok(_) => Ok({ name, value, })
         Err(error) => Err(error)
       }
     Err(error) => Err(error)
@@ -291,7 +291,7 @@ pub fn Mailbox::new(
   display_name : String?,
 ) -> Result[Mailbox, ValidationError] {
   match validate_address(address) {
-    Ok(_) => Ok(Mailbox::{ display_name, address, })
+    Ok(_) => Ok({ display_name, address, })
     Err(error) => Err(error)
   }
 }
@@ -305,20 +305,20 @@ pub fn Mailbox::address_only(
 
 ///|
 pub fn Body::plain_text(content : String) -> Body {
-  Text(TextBody::{
+  Text({
     content_type: ContentType::text_plain(),
-    charset: Charset::Utf8,
-    transfer_encoding: TransferEncoding::QuotedPrintable,
+    charset: Utf8,
+    transfer_encoding: QuotedPrintable,
     content,
   })
 }
 
 ///|
 pub fn Body::html(content : String) -> Body {
-  Text(TextBody::{
+  Text({
     content_type: ContentType::text_html(),
-    charset: Charset::Utf8,
-    transfer_encoding: TransferEncoding::QuotedPrintable,
+    charset: Utf8,
+    transfer_encoding: QuotedPrintable,
     content,
   })
 }
@@ -330,7 +330,7 @@ pub fn Body::text(
   transfer_encoding : TransferEncoding,
   content : String,
 ) -> Body {
-  Text(TextBody::{ content_type, charset, transfer_encoding, content, })
+  Text({ content_type, charset, transfer_encoding, content, })
 }
 
 ///|
@@ -341,7 +341,7 @@ pub fn Body::attachment(
   make_binary_body(
     filename,
     ContentType::application_octet_stream(),
-    DispositionKind::Attachment,
+    Attachment,
     None,
     InMemory(data),
   )
@@ -357,7 +357,7 @@ pub fn Body::inline_asset(
   make_binary_body(
     filename,
     content_type,
-    DispositionKind::Inline,
+    Inline,
     Some(content_id),
     InMemory(data),
   )
@@ -369,13 +369,7 @@ pub fn Body::attachment_file(
   path : String,
   content_type~ : ContentType = ContentType::application_octet_stream(),
 ) -> Result[Body, ValidationError] {
-  make_binary_body(
-    filename,
-    content_type,
-    DispositionKind::Attachment,
-    None,
-    FilePath(path),
-  )
+  make_binary_body(filename, content_type, Attachment, None, FilePath(path))
 }
 
 ///|
@@ -388,7 +382,7 @@ pub fn Body::inline_asset_file(
   make_binary_body(
     filename,
     content_type,
-    DispositionKind::Inline,
+    Inline,
     Some(content_id),
     FilePath(path),
   )
@@ -410,7 +404,7 @@ pub fn Body::binary(
     return Err(EmptyContentId)
   }
   Ok(
-    Binary(BinaryBody::{
+    Binary({
       content_type,
       disposition,
       transfer_encoding,
@@ -423,17 +417,17 @@ pub fn Body::binary(
 
 ///|
 pub fn Body::mixed(parts : Array[Body]) -> Result[Body, ValidationError] {
-  make_multipart(MultipartKind::Mixed, parts)
+  make_multipart(Mixed, parts)
 }
 
 ///|
 pub fn Body::alternative(parts : Array[Body]) -> Result[Body, ValidationError] {
-  make_multipart(MultipartKind::Alternative, parts)
+  make_multipart(Alternative, parts)
 }
 
 ///|
 pub fn Body::related(parts : Array[Body]) -> Result[Body, ValidationError] {
-  make_multipart(MultipartKind::Related, parts)
+  make_multipart(Related, parts)
 }
 
 ///|
@@ -457,7 +451,7 @@ pub fn Message::new(
   if to.is_empty() && cc.is_empty() && bcc.is_empty() {
     return Err(EmptyMessageRecipients)
   }
-  Ok(Message::{ from, to, cc, bcc, subject, headers, body, })
+  Ok({ from, to, cc, bcc, subject, headers, body, })
 }
 
 ///|
@@ -484,7 +478,7 @@ pub fn Envelope::new(
   if normalized.is_empty() {
     return Err(EmptyRecipients)
   }
-  Ok(Envelope::{ mail_from, rcpt_to: normalized, })
+  Ok({ mail_from, rcpt_to: normalized, })
 }
 
 ///|
@@ -527,14 +521,14 @@ fn make_binary_body(
     None => None
   }
   Ok(
-    Binary(BinaryBody::{
+    Binary({
       content_type,
-      disposition: ContentDisposition::{
+      disposition: {
         kind: disposition_kind,
         filename: Some(filename),
         parameters: [],
       },
-      transfer_encoding: TransferEncoding::Base64,
+      transfer_encoding: Base64,
       filename: Some(filename),
       content_id: normalized_content_id,
       source,

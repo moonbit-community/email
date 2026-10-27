@@ -15,8 +15,8 @@ test "advance the smtp state machine in the expected order" {
 
 ///|
 test "classify transient and permanent smtp failures" {
-  assert_true(classify_smtp_status(421) == FailureClass::Transient)
-  assert_true(classify_smtp_status(550) == FailureClass::Permanent)
+  assert_true(classify_smtp_status(421) == Transient)
+  assert_true(classify_smtp_status(550) == Permanent)
 }
 
 ///|

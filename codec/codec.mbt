@@ -23,7 +23,7 @@ priv struct CollectWriter {
 
 ///|
 fn CollectWriter::new() -> CollectWriter {
-  { builder: StringBuilder::new(), }
+  { builder: StringBuilder(), }
 }
 
 ///|
@@ -38,7 +38,7 @@ pub fn to_rfc5322(message : @core.Message) -> String {
   if contains_file_source(message.body) {
     abort("file-backed attachments require async render_to_rfc5322/write_to")
   }
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   write_message_headers_sync(builder, message, Strict)
   builder.write_string("\r\n")
   write_body_sync(builder, message.body, [], Strict)
@@ -351,7 +351,7 @@ async fn[W : MimeWriter] write_base64_lines(writer : W, data : Bytes) -> Unit {
 
 ///|
 async fn[W : MimeWriter] write_base64_file(writer : W, path : String) -> Unit {
-  let file = @fs.open(path, mode=@fs.ReadOnly)
+  let file = @fs.open(path, mode=ReadOnly)
   defer file.close()
   let pending : Array[Byte] = []
   let mut first = true
@@ -382,7 +382,7 @@ async fn[W : MimeWriter] write_base64_file(writer : W, path : String) -> Unit {
 
 ///|
 async fn[W : MimeWriter] write_raw_file(writer : W, path : String) -> Unit {
-  let file = @fs.open(path, mode=@fs.ReadOnly)
+  let file = @fs.open(path, mode=ReadOnly)
   defer file.close()
   while file.read_some(max_len=4096) is Some(chunk) {
     writer.write_text(bytes_to_ascii_string(chunk.to_array()))
@@ -407,7 +407,7 @@ fn fold_header_line(line : String, max_len : Int32) -> String {
   if tokens.is_empty() {
     return line
   }
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut current = tokens[0].to_owned()
   for token_view in tokens[1:] {
     let token = token_view.to_owned()
@@ -545,7 +545,7 @@ fn is_parameter_token(value : String) -> Bool {
 ///|
 fn percent_encode_utf8(value : String) -> String {
   let bytes = @utf8.encode(value)
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for byte in bytes {
     let code = byte.to_int()
     if is_attr_char(code) {
@@ -665,7 +665,7 @@ fn encode_text_content(
 fn encode_quoted_printable(content : String) -> String {
   let normalized = normalize_text_newlines(content)
   let bytes = @utf8.encode(normalized)
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut line_len = 0
   for index in 0..<bytes.length() {
     let byte = bytes[index]
@@ -738,7 +738,7 @@ fn encode_base64(data : Array[Byte]) -> String {
 
 ///|
 fn encode_base64_mime(data : Bytes) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut first = true
   for start = 0; start < data.length(); {
     let end = min_int(start + 57, data.length())
@@ -754,7 +754,7 @@ fn encode_base64_mime(data : Bytes) -> String {
 
 ///|
 fn bytes_to_ascii_string(data : Array[Byte]) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for byte in data {
     builder.write_char(byte.to_int().unsafe_to_char())
   }
@@ -1344,9 +1344,8 @@ fn decode_text_body(
   transfer_encoding : @core.TransferEncoding,
 ) -> String raise ParseError {
   match transfer_encoding {
-    @core.TransferEncoding::QuotedPrintable =>
-      bytes_to_text(decode_quoted_printable_bytes(body_text))
-    @core.TransferEncoding::Base64 => decode_base64_text(body_text)
+    QuotedPrintable => bytes_to_text(decode_quoted_printable_bytes(body_text))
+    Base64 => decode_base64_text(body_text)
     _ => body_text.replace_all(old="\r\n", new="\n")
   }
 }
@@ -1357,9 +1356,8 @@ fn decode_binary_body(
   transfer_encoding : @core.TransferEncoding,
 ) -> Bytes raise ParseError {
   match transfer_encoding {
-    @core.TransferEncoding::QuotedPrintable =>
-      decode_quoted_printable_bytes(body_text)
-    @core.TransferEncoding::Base64 => decode_base64_bytes(body_text)
+    QuotedPrintable => decode_quoted_printable_bytes(body_text)
+    Base64 => decode_base64_bytes(body_text)
     _ => @utf8.encode(body_text)
   }
 }
@@ -1462,7 +1460,7 @@ fn decode_percent_bytes(value : String) -> Bytes raise ParseError {
 
 ///|
 fn decode_encoded_words(value : String) -> String raise ParseError {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut index = 0
   while index < value.length() {
     if index + 1 < value.length() &&

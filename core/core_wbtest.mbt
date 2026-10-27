@@ -53,15 +53,9 @@ test "normalize mailbox lists before envelope construction" {
 ///|
 test "reject invalid multipart nesting shapes" {
   let attachment = must_ok(Body::attachment("report.bin", [b'B']))
+  expect_validation_error(validate_multipart(Related, []), EmptyMultipart)
   expect_validation_error(
-    validate_multipart(MultipartKind::Related, []),
-    EmptyMultipart,
-  )
-  expect_validation_error(
-    validate_multipart(MultipartKind::Alternative, [
-      Body::plain_text("Hello"),
-      attachment,
-    ]),
+    validate_multipart(Alternative, [Body::plain_text("Hello"), attachment]),
     AlternativeRequiresTextParts,
   )
 }
