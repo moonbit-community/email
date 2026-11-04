@@ -1,5 +1,6 @@
 ///|
 /// Shared validation errors for core domain constructors.
+#derive(Eq, Debug)
 pub(all) enum ValidationError {
   EmptyAddress
   MissingAtSign
@@ -17,91 +18,104 @@ pub(all) enum ValidationError {
   AlternativeRequiresTextParts
   EmptyFilename
   EmptyContentId
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum Charset {
   Utf8
   UsAscii
   Other(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum TransferEncoding {
   SevenBit
   EightBit
   QuotedPrintable
   Base64
   Binary
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum DispositionKind {
   Inline
   Attachment
   Other(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum MultipartKind {
   Mixed
   Alternative
   Related
   Custom(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct HeaderParam {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct ContentType {
   top_level : String
   sub_type : String
   parameters : Array[HeaderParam]
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct ContentId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct ContentDisposition {
   kind : DispositionKind
   filename : String?
   parameters : Array[HeaderParam]
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct Mailbox {
   display_name : String?
   address : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct Header {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct TextBody {
   content_type : ContentType
   charset : Charset
   transfer_encoding : TransferEncoding
   content : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum AttachmentSource {
   InMemory(Array[Byte])
   FilePath(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct BinaryBody {
   content_type : ContentType
   disposition : ContentDisposition
@@ -109,16 +123,18 @@ pub struct BinaryBody {
   filename : String?
   content_id : ContentId?
   source : AttachmentSource
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub enum Body {
   Text(TextBody)
   Binary(BinaryBody)
   Multipart(MultipartKind, Array[Body])
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct Message {
   from : Mailbox
   to : Array[Mailbox]
@@ -127,13 +143,14 @@ pub struct Message {
   subject : String
   headers : Array[Header]
   body : Body
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct Envelope {
   mail_from : Mailbox
   rcpt_to : Array[Mailbox]
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn ContentType::new(

@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub enum AttachmentSource {
   InMemory(Array[Byte])
   FilePath(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn AttachmentSource::file_path(String) -> Self
 pub fn AttachmentSource::in_memory(Array[Byte]) -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct BinaryBody {
   content_type : ContentType
   disposition : ContentDisposition
@@ -24,13 +26,14 @@ pub struct BinaryBody {
   filename : String?
   content_id : ContentId?
   source : AttachmentSource
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub enum Body {
   Text(TextBody)
   Binary(BinaryBody)
   Multipart(MultipartKind, Array[Body])
-} derive(Eq, @debug.Debug)
+}
 pub fn Body::alternative(Array[Self]) -> Result[Self, ValidationError]
 pub fn Body::attachment(String, Array[Byte]) -> Result[Self, ValidationError]
 pub fn Body::attachment_file(String, String, content_type? : ContentType) -> Result[Self, ValidationError]
@@ -44,72 +47,82 @@ pub fn Body::plain_text(String) -> Self
 pub fn Body::related(Array[Self]) -> Result[Self, ValidationError]
 pub fn Body::text(ContentType, Charset, TransferEncoding, String) -> Self
 
+#derive(Eq, @debug.Debug)
 pub enum Charset {
   Utf8
   UsAscii
   Other(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn Charset::other(String) -> Self
 pub fn Charset::us_ascii() -> Self
 pub fn Charset::utf8() -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct ContentDisposition {
   kind : DispositionKind
   filename : String?
   parameters : Array[HeaderParam]
-} derive(Eq, @debug.Debug)
+}
 pub fn ContentDisposition::new(DispositionKind, filename? : String, parameters? : Array[HeaderParam]) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub struct ContentId {
   value : String
-} derive(Eq, @debug.Debug)
+}
 pub fn ContentId::new(String) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub struct ContentType {
   top_level : String
   sub_type : String
   parameters : Array[HeaderParam]
-} derive(Eq, @debug.Debug)
+}
 pub fn ContentType::application_octet_stream() -> Self
 pub fn ContentType::new(String, String, Array[HeaderParam]) -> Self
 pub fn ContentType::text_html() -> Self
 pub fn ContentType::text_plain() -> Self
 
+#derive(Eq, @debug.Debug)
 pub enum DispositionKind {
   Inline
   Attachment
   Other(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn DispositionKind::attachment() -> Self
 pub fn DispositionKind::inline() -> Self
 pub fn DispositionKind::other(String) -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct Envelope {
   mail_from : Mailbox
   rcpt_to : Array[Mailbox]
-} derive(Eq, @debug.Debug)
+}
 pub fn Envelope::from_message(Mailbox, Message) -> Result[Self, ValidationError]
 pub fn Envelope::new(Mailbox, Array[Mailbox]) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub struct Header {
   name : String
   value : String
-} derive(Eq, @debug.Debug)
+}
 pub fn Header::new(String, String) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub struct HeaderParam {
   name : String
   value : String
-} derive(Eq, @debug.Debug)
+}
 pub fn HeaderParam::new(String, String) -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct Mailbox {
   display_name : String?
   address : String
-} derive(Eq, @debug.Debug)
+}
 pub fn Mailbox::address_only(String) -> Result[Self, ValidationError]
 pub fn Mailbox::new(String, String?) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub struct Message {
   from : Mailbox
   to : Array[Mailbox]
@@ -118,41 +131,45 @@ pub struct Message {
   subject : String
   headers : Array[Header]
   body : Body
-} derive(Eq, @debug.Debug)
+}
 pub fn Message::all_recipients(Self) -> Array[Mailbox]
 pub fn Message::new(Mailbox, Array[Mailbox], Array[Mailbox], Array[Mailbox], String, Body, Array[Header]) -> Result[Self, ValidationError]
 
+#derive(Eq, @debug.Debug)
 pub enum MultipartKind {
   Mixed
   Alternative
   Related
   Custom(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn MultipartKind::alternative() -> Self
 pub fn MultipartKind::custom(String) -> Self
 pub fn MultipartKind::mixed() -> Self
 pub fn MultipartKind::related() -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct TextBody {
   content_type : ContentType
   charset : Charset
   transfer_encoding : TransferEncoding
   content : String
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub enum TransferEncoding {
   SevenBit
   EightBit
   QuotedPrintable
   Base64
   Binary
-} derive(Eq, @debug.Debug)
+}
 pub fn TransferEncoding::base64() -> Self
 pub fn TransferEncoding::binary() -> Self
 pub fn TransferEncoding::eight_bit() -> Self
 pub fn TransferEncoding::quoted_printable() -> Self
 pub fn TransferEncoding::seven_bit() -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ValidationError {
   EmptyAddress
   MissingAtSign
@@ -170,7 +187,7 @@ pub(all) enum ValidationError {
   AlternativeRequiresTextParts
   EmptyFilename
   EmptyContentId
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

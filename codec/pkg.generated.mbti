@@ -18,17 +18,19 @@ pub fn to_rfc5322(@core.Message) -> String
 pub async fn[W : MimeWriter] write_to(W, @core.Message, mode? : MimeMode) -> Unit
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror ParseError {
   Malformed(String)
   Unsupported(String)
   CoreValidation(@core.ValidationError)
-} derive(Eq, @debug.Debug)
+}
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum MimeMode {
   Strict
   Lenient
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

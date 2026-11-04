@@ -1,26 +1,30 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum SmtpSecurity {
   Plain
   StartTls
   Tls
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum SmtpAuthMechanism {
   Plain
   Login
   Xoauth2
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum SmtpAuth {
   None
   Plain(String, String)
   Login(String, String)
   Xoauth2(String, String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum SmtpPhase {
   Connect
   Greet
@@ -34,34 +38,38 @@ pub(all) enum SmtpPhase {
   MessageBody
   FinalResponse
   Quit
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum SmtpTlsTrust {
   SystemRoot
   InsecureNoVerify
   CustomPemFile(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct SmtpTimeouts {
   connect_ms : Int32
   greeting_ms : Int32
   command_ms : Int32
   data_ms : Int32
   idle_ms : Int32
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct SmtpRetryPolicy {
   max_retries : Int32
   retry_delay_ms : Int32
   retry_on_connection_failure : Bool
   retry_on_timeout : Bool
   retry_on_transient_failure : Bool
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct SmtpCapabilities {
   raw_lines : Array[String]
   auth_mechanisms : Array[SmtpAuthMechanism]
@@ -69,9 +77,10 @@ pub struct SmtpCapabilities {
   supports_pipelining : Bool
   supports_8bitmime : Bool
   max_message_size : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct SmtpConfig {
   host : String
   port : Int32
@@ -82,9 +91,10 @@ pub struct SmtpConfig {
   timeouts : SmtpTimeouts
   retry_policy : SmtpRetryPolicy
   reuse_connection : Bool
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub suberror SmtpClientError {
   TransportClosed
   BusyTransport
@@ -97,7 +107,7 @@ pub suberror SmtpClientError {
   MissingAuthMechanism(SmtpAuthMechanism)
   AuthFailed(String)
   ProtocolError(String)
-} derive(Eq, Debug)
+}
 
 ///|
 priv enum LiveSmtpConnection {

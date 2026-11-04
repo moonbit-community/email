@@ -2,12 +2,13 @@
 let smtp_test_port = 4625
 
 ///|
+#derive(Eq, Debug)
 enum FakeAuthMode {
   None
   Plain
   Login
   Xoauth2
-} derive(Eq, Debug)
+}
 
 ///|
 struct SmtpTranscript {
