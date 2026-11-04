@@ -167,7 +167,9 @@ pub async fn FileTransport::send(
     }
     @fs.write_file(artifact_path, encoded_message, create_mode=CreateOrTruncate)
   } catch {
-    err => return Err(IoFailure(err.to_string()))
+    @os_error.OSError(_, context=_) as err =>
+      return Err(IoFailure(err.to_string()))
+    err => raise err
   }
   let artifact = { path: artifact_path, content: encoded_message, }
   self.next_index += 1
@@ -203,7 +205,8 @@ pub async fn FileTransport::send_message(
     self.artifacts.push({ path: artifact_path, content: encoded, })
     Ok(DeliveryOutcome::all_accepted(envelope.rcpt_to))
   } catch {
-    err => Err(IoFailure(err.to_string()))
+    @os_error.OSError(_, context=_) as err => Err(IoFailure(err.to_string()))
+    err => raise err
   }
 }
 
@@ -275,12 +278,11 @@ fn StubSmtpTransport::next_outcome(
   self : StubSmtpTransport,
   envelope : @core.Envelope,
 ) -> DeliveryOutcome {
-  match self.planned_outcomes.get(self.next_plan_index) {
-    Some(outcome) => {
-      self.next_plan_index += 1
-      outcome
-    }
-    None => DeliveryOutcome::all_accepted(envelope.rcpt_to)
+  if self.planned_outcomes.get(self.next_plan_index) is Some(outcome) {
+    self.next_plan_index += 1
+    outcome
+  } else {
+    DeliveryOutcome::all_accepted(envelope.rcpt_to)
   }
 }
 
@@ -330,9 +332,10 @@ fn derive_failure_class(
     None
   } else {
     let _ = accepted
-    match parse_status_code(response) {
-      Some(status) => Some(classify_smtp_status(status))
-      None => Some(Permanent)
+    if parse_status_code(response) is Some(status) {
+      Some(classify_smtp_status(status))
+    } else {
+      Some(Permanent)
     }
   }
 }

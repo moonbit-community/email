@@ -278,7 +278,9 @@ async fn SmtpTransport::send_payload(
       }
       return outcome
     } catch {
-      err => {
+      ConnectionFailure(_, _)
+      | Timeout(_, _)
+      | ServiceRejected(_, _, _, _) as err => {
         guard should_retry_send(
           self.config.retry_policy,
           err,
@@ -292,6 +294,7 @@ async fn SmtpTransport::send_payload(
           @async.sleep(self.config.retry_policy.retry_delay_ms)
         }
       }
+      err => raise err
     }
   }
 }
@@ -531,10 +534,10 @@ priv struct PlainSmtpSession {
 
 ///|
 impl SmtpSession for PlainSmtpSession with fn read_line(self) {
-  match self.io.read_until("\r\n") {
-    Some(line) => line
-    None => raise ProtocolError("connection closed while reading SMTP response")
+  guard self.io.read_until("\r\n") is Some(line) else {
+    raise ProtocolError("connection closed while reading SMTP response")
   }
+  line
 }
 
 ///|
@@ -557,10 +560,10 @@ fn TlsSmtpSession::close(self : TlsSmtpSession) -> Unit {
 
 ///|
 impl SmtpSession for TlsSmtpSession with fn read_line(self) {
-  match self.io.read_until("\r\n") {
-    Some(line) => line
-    None => raise ProtocolError("connection closed while reading SMTP response")
+  guard self.io.read_until("\r\n") is Some(line) else {
+    raise ProtocolError("connection closed while reading SMTP response")
   }
+  line
 }
 
 ///|
@@ -678,12 +681,10 @@ fn parse_capabilities(lines : Array[String]) -> SmtpCapabilities {
       max_message_size = parse_positive_int(normalized[5:].trim().to_owned())
     } else if normalized.has_prefix("AUTH ") {
       for token in normalized[5:].split(" ") {
-        match parse_auth_mechanism_name(token.to_owned()) {
-          Some(mechanism) =>
-            if !auth_mechanisms.contains(mechanism) {
-              auth_mechanisms.push(mechanism)
-            }
-          None => ()
+        if parse_auth_mechanism_name(token.to_owned()) is Some(mechanism) {
+          if !auth_mechanisms.contains(mechanism) {
+            auth_mechanisms.push(mechanism)
+          }
         }
       }
     }
@@ -715,9 +716,8 @@ async fn[S : SmtpSession] smtp_auth(
   capabilities : SmtpCapabilities,
   timeouts : SmtpTimeouts,
 ) -> Unit {
-  match auth_mechanism_for(auth) {
-    Some(mechanism) => require_auth_mechanism(capabilities, mechanism)
-    None => ()
+  if auth_mechanism_for(auth) is Some(mechanism) {
+    require_auth_mechanism(capabilities, mechanism)
   }
   match auth {
     None => ()
@@ -1082,10 +1082,10 @@ fn parse_response_text(line : String) -> String {
 
 ///|
 fn parse_status_code_or_raise(line : String) -> Int32 raise {
-  match parse_status_code(line) {
-    Some(status) => status
-    None => raise InvalidResponse(line)
+  guard parse_status_code(line) is Some(status) else {
+    raise InvalidResponse(line)
   }
+  status
 }
 
 ///|

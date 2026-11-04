@@ -86,10 +86,10 @@ fn scenario_with_auth(auth_mode : FakeAuthMode) -> ConnectionScenario {
 fn guard_some_capabilities(
   value : @transport.SmtpCapabilities?,
 ) -> @transport.SmtpCapabilities {
-  match value {
-    Some(capabilities) => capabilities
-    None => abort("expected negotiated capabilities")
+  guard value is Some(capabilities) else {
+    abort("expected negotiated capabilities")
   }
+  capabilities
 }
 
 ///|
@@ -156,7 +156,8 @@ async fn run_fake_smtp_server_on(
       Some((conn, _)) => {
         transcript.connection_count += 1
         handle_fake_smtp_connection(conn, transcript, scenario) catch {
-          _ => ()
+          @os_error.OSError(_, context=_) => ()
+          err => raise err
         }
         conn.close()
       }
@@ -180,7 +181,8 @@ async fn run_fake_smtp_server_parallel_on(
           group.spawn_bg(async fn() {
             defer conn.close()
             handle_fake_smtp_connection(conn, transcript, scenario) catch {
-              _ => ()
+              @os_error.OSError(_, context=_) => ()
+              err => raise err
             }
           })
         }
@@ -204,75 +206,69 @@ async fn handle_fake_smtp_connection(
   let mut in_data = false
   let mut login_stage = 0
   for ;; {
-    match conn.read_until("\r\n") {
-      None => return
-      Some(line) => {
-        if in_data {
-          if line == "." {
-            in_data = false
-            conn.write("250 queued\r\n")
-          } else {
-            transcript.data = transcript.data + line + "\n"
-          }
-          continue
-        }
-        transcript.lines.push(line)
-        if login_stage == 1 {
-          login_stage = 2
-          conn.write("334 UGFzc3dvcmQ6\r\n")
-          continue
-        }
-        if login_stage == 2 {
-          login_stage = 0
-          conn.write("235 authenticated\r\n")
-          continue
-        }
-        if line.has_prefix("EHLO ") {
-          write_multiline_response(conn, scenario.ehlo_lines)
-        } else if line.has_prefix("HELO ") {
-          conn.write("250 localhost\r\n")
-        } else if line.has_prefix("AUTH PLAIN ") && scenario.auth_mode == Plain {
-          conn.write("235 authenticated\r\n")
-        } else if line == "AUTH LOGIN" && scenario.auth_mode == Login {
-          login_stage = 1
-          conn.write("334 VXNlcm5hbWU6\r\n")
-        } else if line.has_prefix("AUTH XOAUTH2 ") &&
-          scenario.auth_mode == Xoauth2 {
-          conn.write("235 authenticated\r\n")
-        } else if line.has_prefix("AUTH ") {
-          conn.write("535 authentication failed\r\n")
-        } else if line.has_prefix("MAIL FROM:") {
-          if scenario.close_before_mail_from_response {
-            return
-          }
-          match scenario.mail_from_seen {
-            Some(semaphore) => semaphore.release()
-            None => ()
-          }
-          if scenario.mail_from_delay_ms > 0 {
-            @async.sleep(scenario.mail_from_delay_ms)
-          }
-          conn.write("250 sender ok\r\n")
-        } else if line.has_prefix("RCPT TO:") {
-          rcpt_index += 1
-          if scenario.reject_second_recipient && rcpt_index == 2 {
-            conn.write("550 rejected\r\n")
-          } else {
-            conn.write("250 recipient ok\r\n")
-          }
-        } else if line == "DATA" {
-          conn.write("354 end with <CRLF>.<CRLF>\r\n")
-          if scenario.close_after_data_command {
-            return
-          }
-          in_data = true
-        } else if line == "QUIT" {
-          conn.write("221 bye\r\n")
-          return
-        } else {
-          conn.write("500 unsupported\r\n")
-        }
+    guard conn.read_until("\r\n") is Some(line) else { return }
+    if in_data {
+      if line == "." {
+        in_data = false
+        conn.write("250 queued\r\n")
+      } else {
+        transcript.data = transcript.data + line + "\n"
       }
+      continue
+    }
+    transcript.lines.push(line)
+    if login_stage == 1 {
+      login_stage = 2
+      conn.write("334 UGFzc3dvcmQ6\r\n")
+      continue
+    }
+    if login_stage == 2 {
+      login_stage = 0
+      conn.write("235 authenticated\r\n")
+      continue
+    }
+    if line.has_prefix("EHLO ") {
+      write_multiline_response(conn, scenario.ehlo_lines)
+    } else if line.has_prefix("HELO ") {
+      conn.write("250 localhost\r\n")
+    } else if line.has_prefix("AUTH PLAIN ") && scenario.auth_mode == Plain {
+      conn.write("235 authenticated\r\n")
+    } else if line == "AUTH LOGIN" && scenario.auth_mode == Login {
+      login_stage = 1
+      conn.write("334 VXNlcm5hbWU6\r\n")
+    } else if line.has_prefix("AUTH XOAUTH2 ") && scenario.auth_mode == Xoauth2 {
+      conn.write("235 authenticated\r\n")
+    } else if line.has_prefix("AUTH ") {
+      conn.write("535 authentication failed\r\n")
+    } else if line.has_prefix("MAIL FROM:") {
+      if scenario.close_before_mail_from_response {
+        return
+      }
+      if scenario.mail_from_seen is Some(semaphore) {
+        semaphore.release()
+      }
+      if scenario.mail_from_delay_ms > 0 {
+        @async.sleep(scenario.mail_from_delay_ms)
+      }
+      conn.write("250 sender ok\r\n")
+    } else if line.has_prefix("RCPT TO:") {
+      rcpt_index += 1
+      if scenario.reject_second_recipient && rcpt_index == 2 {
+        conn.write("550 rejected\r\n")
+      } else {
+        conn.write("250 recipient ok\r\n")
+      }
+    } else if line == "DATA" {
+      conn.write("354 end with <CRLF>.<CRLF>\r\n")
+      if scenario.close_after_data_command {
+        return
+      }
+      in_data = true
+    } else if line == "QUIT" {
+      conn.write("221 bye\r\n")
+      return
+    } else {
+      conn.write("500 unsupported\r\n")
     }
   }
 }

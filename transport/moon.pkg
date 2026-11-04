@@ -5,10 +5,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/async/os_error",
   "moonbitlang/async/socket",
   "moonbitlang/async/tls",
 }
-
-import {
-  "moonbitlang/async/os_error",
-} for "test"
