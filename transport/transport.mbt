@@ -1,59 +1,68 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum TransportError {
   ClosedTransport
   IoFailure(String)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum FailureClass {
   Transient
   Permanent
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct DeliveryOutcome {
   accepted : Array[@core.Mailbox]
   rejected : Array[@core.Mailbox]
   unsent : Array[@core.Mailbox]
   response : String
   failure_class : FailureClass?
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct DeliveryRecord {
   envelope : @core.Envelope
   encoded_message : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct FileArtifact {
   path : String
   content : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct SmtpAttempt {
   envelope : @core.Envelope
   encoded_message : String
   connection_id : Int32
   trace : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct FakeTransport {
   records : Array[DeliveryRecord]
   mut closed : Bool
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct FileTransport {
   root_dir : String
   artifacts : Array[FileArtifact]
   mut next_index : Int32
   mut closed : Bool
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct StubSmtpTransport {
   pool_size : Int32
   planned_outcomes : Array[DeliveryOutcome]
@@ -61,7 +70,7 @@ pub struct StubSmtpTransport {
   attempts : Array[SmtpAttempt]
   mut send_count : Int32
   mut closed : Bool
-} derive(Debug)
+}
 
 ///|
 pub fn DeliveryOutcome::all_accepted(

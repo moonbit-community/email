@@ -1,15 +1,17 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum MimeMode {
   Strict
   Lenient
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) suberror ParseError {
   Malformed(String)
   Unsupported(String)
   CoreValidation(@core.ValidationError)
-} derive(Eq, Debug)
+}
 
 ///|
 pub(open) trait MimeWriter {
