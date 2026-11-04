@@ -124,25 +124,6 @@ For local `.eml` output, use `FileTransport`.
 
 For real delivery, use `SmtpTransport`.
 
-## Command-Line Example
-
-The repository includes a runnable example in [cmd/main/main.mbt](cmd/main/main.mbt).
-
-It demonstrates:
-
-- QQ SMTP over TLS
-- repeated `--attachment` arguments
-- file-backed attachment sending through `SmtpTransport`
-
-```bash
-moon run cmd/main -- \
-  --sender your-account@example.com \
-  --recipient someone@example.com \
-  --auth-code your-auth-code \
-  --subject "MoonBit email test" \
-  --body "Hello from moonbit-community/email"
-```
-
 ## Status
 
 Available today:

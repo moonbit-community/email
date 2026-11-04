@@ -121,25 +121,6 @@ let outcome = transport.send_message(envelope, message) |> must_ok
 
 如果你需要真实网络投递，则使用 `SmtpTransport`。
 
-## 命令行示例
-
-仓库里自带了一个可运行示例，位于 [cmd/main/main.mbt](cmd/main/main.mbt)。
-
-它当前演示了：
-
-- 通过 QQ SMTP over TLS 发送
-- 重复传入 `--attachment`
-- 用 `SmtpTransport` 发送 file-backed attachment
-
-```bash
-moon run cmd/main -- \
-  --sender your-account@example.com \
-  --recipient someone@example.com \
-  --auth-code your-auth-code \
-  --subject "MoonBit email test" \
-  --body "Hello from moonbit-community/email"
-```
-
 ## 当前状态
 
 目前已经具备：

@@ -1,9 +1,0 @@
-import {
-  "moonbit-community/email/core",
-  "moonbit-community/email/codec",
-  "moonbit-community/email/transport",
-  "moonbitlang/core/argparse",
-  "moonbitlang/async",
-}
-
-pkgtype(kind: "executable")
