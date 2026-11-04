@@ -228,10 +228,8 @@ fn body_header_fields(
           format_transfer_encoding(binary.transfer_encoding),
         ),
       ]
-      match binary.content_id {
-        Some(content_id) =>
-          fields.push(("Content-Id", "<" + content_id.value + ">"))
-        None => ()
+      if binary.content_id is Some(content_id) {
+        fields.push(("Content-Id", "<" + content_id.value + ">"))
       }
       fields
     }
@@ -433,10 +431,10 @@ fn format_mailboxes(mailboxes : Array[@core.Mailbox]) -> String {
 
 ///|
 fn format_mailbox(mailbox : @core.Mailbox) -> String {
-  match mailbox.display_name {
-    Some(display_name) =>
-      encode_phrase(display_name) + " <" + mailbox.address + ">"
-    None => mailbox.address
+  if mailbox.display_name is Some(display_name) {
+    encode_phrase(display_name) + " <" + mailbox.address + ">"
+  } else {
+    mailbox.address
   }
 }
 
@@ -477,9 +475,8 @@ fn format_content_type_with_extra(
 ///|
 fn format_content_disposition(disposition : @core.ContentDisposition) -> String {
   let parts : Array[String] = [format_disposition_kind(disposition.kind)]
-  match disposition.filename {
-    Some(filename) => parts.push(format_parameter("filename", filename))
-    None => ()
+  if disposition.filename is Some(filename) {
+    parts.push(format_parameter("filename", filename))
   }
   if !disposition.parameters.is_empty() {
     parts.push(
@@ -876,10 +873,10 @@ fn required_header(
   headers : Array[(String, String)],
   name : String,
 ) -> String raise ParseError {
-  match optional_header(headers, name) {
-    Some(value) => value
-    None => raise Malformed("missing required header: " + name)
+  guard optional_header(headers, name) is Some(value) else {
+    raise Malformed("missing required header: " + name)
   }
+  value
 }
 
 ///|
@@ -962,18 +959,18 @@ fn split_mailbox_segments(value : String) -> Array[String] {
   for ch in value.iter() {
     if ch == '"' {
       in_quotes = !in_quotes
-      current = current + ch.to_string()
+      current += ch.to_string()
     } else if ch == '<' && !in_quotes {
       angle_depth += 1
-      current = current + ch.to_string()
+      current += ch.to_string()
     } else if ch == '>' && !in_quotes && angle_depth > 0 {
       angle_depth -= 1
-      current = current + ch.to_string()
+      current += ch.to_string()
     } else if ch == ',' && !in_quotes && angle_depth == 0 {
       segments.push(current.trim().to_owned())
       current = ""
     } else {
-      current = current + ch.to_string()
+      current += ch.to_string()
     }
   }
   let trailing = current.trim().to_owned()
@@ -1031,9 +1028,8 @@ fn parse_entity(
   let transfer_encoding = parse_transfer_encoding(transfer_encoding_text)
   if content_type.top_level.to_lower() == "multipart" {
     let boundary = find_parameter(content_type.parameters, "boundary")
-    let boundary = match boundary {
-      Some(value) => value
-      None => raise Malformed("multipart entity missing boundary")
+    guard boundary is Some(boundary) else {
+      raise Malformed("multipart entity missing boundary")
     }
     let parts = split_multipart_parts(body_text, boundary)
     let bodies : Array[@core.Body] = []
@@ -1090,14 +1086,14 @@ fn multipart_kind_for(sub_type : String) -> @core.MultipartKind {
 
 ///|
 fn charset_from_content_type(content_type : @core.ContentType) -> @core.Charset {
-  match find_parameter(content_type.parameters, "charset") {
-    Some(value) =>
-      match value.to_lower() {
-        "utf-8" => @core.Charset::utf8()
-        "us-ascii" => @core.Charset::us_ascii()
-        other => @core.Charset::other(other)
-      }
-    None => @core.Charset::utf8()
+  if find_parameter(content_type.parameters, "charset") is Some(value) {
+    match value.to_lower() {
+      "utf-8" => @core.Charset::utf8()
+      "us-ascii" => @core.Charset::us_ascii()
+      other => @core.Charset::other(other)
+    }
+  } else {
+    @core.Charset::utf8()
   }
 }
 
@@ -1132,49 +1128,45 @@ fn parse_content_type(value : String) -> @core.ContentType raise ParseError {
 fn parse_content_disposition(
   value : String?,
 ) -> @core.ContentDisposition raise ParseError {
-  match value {
-    Some(text) => {
-      let segments = split_parameter_segments(text)
-      if segments.is_empty() {
-        raise Malformed("empty Content-Disposition")
-      }
-      let kind = match segments[0].trim().to_lower() {
-        "inline" => @core.DispositionKind::inline()
-        "attachment" => @core.DispositionKind::attachment()
-        other => @core.DispositionKind::other(other.to_owned())
-      }
-      let parameters : Array[@core.HeaderParam] = []
-      let mut filename : String? = None
-      for segment in segments[1:] {
-        match parse_parameter(segment) {
-          Some((name, parameter_value)) =>
-            if name.to_lower() == "filename" {
-              filename = Some(parameter_value)
-            } else {
-              parameters.push(@core.HeaderParam::new(name, parameter_value))
-            }
-          None => ()
-        }
-      }
-      match filename {
-        Some(name) =>
-          match
-            @core.ContentDisposition::new(kind, filename=name, parameters~) {
-            Ok(disposition) => disposition
-            Err(error) => raise CoreValidation(error)
+  if value is Some(text) {
+    let segments = split_parameter_segments(text)
+    if segments.is_empty() {
+      raise Malformed("empty Content-Disposition")
+    }
+    let kind = match segments[0].trim().to_lower() {
+      "inline" => @core.DispositionKind::inline()
+      "attachment" => @core.DispositionKind::attachment()
+      other => @core.DispositionKind::other(other.to_owned())
+    }
+    let parameters : Array[@core.HeaderParam] = []
+    let mut filename : String? = None
+    for segment in segments[1:] {
+      match parse_parameter(segment) {
+        Some((name, parameter_value)) =>
+          if name.to_lower() == "filename" {
+            filename = Some(parameter_value)
+          } else {
+            parameters.push(@core.HeaderParam::new(name, parameter_value))
           }
-        None =>
-          match @core.ContentDisposition::new(kind, parameters~) {
-            Ok(disposition) => disposition
-            Err(error) => raise CoreValidation(error)
-          }
+        None => ()
       }
     }
-    None =>
-      match @core.ContentDisposition::new(@core.DispositionKind::attachment()) {
+    if filename is Some(name) {
+      match @core.ContentDisposition::new(kind, filename=name, parameters~) {
         Ok(disposition) => disposition
         Err(error) => raise CoreValidation(error)
       }
+    } else {
+      match @core.ContentDisposition::new(kind, parameters~) {
+        Ok(disposition) => disposition
+        Err(error) => raise CoreValidation(error)
+      }
+    }
+  } else {
+    match @core.ContentDisposition::new(@core.DispositionKind::attachment()) {
+      Ok(disposition) => disposition
+      Err(error) => raise CoreValidation(error)
+    }
   }
 }
 
@@ -1208,12 +1200,12 @@ fn split_parameter_segments(value : String) -> Array[String] {
   for ch in value.iter() {
     if ch == '"' {
       in_quotes = !in_quotes
-      current = current + ch.to_string()
+      current += ch.to_string()
     } else if ch == ';' && !in_quotes {
       segments.push(current.trim().to_owned())
       current = ""
     } else {
-      current = current + ch.to_string()
+      current += ch.to_string()
     }
   }
   segments.push(current.trim().to_owned())
@@ -1282,13 +1274,13 @@ fn parse_transfer_encoding(
 
 ///|
 fn parse_content_id(value : String?) -> @core.ContentId? {
-  match value {
-    Some(text) =>
-      match @core.ContentId::new(text.trim().trim(chars="<>").to_owned()) {
-        Ok(content_id) => Some(content_id)
-        Err(_) => None
-      }
-    None => None
+  if value is Some(text) {
+    match @core.ContentId::new(text.trim().trim(chars="<>").to_owned()) {
+      Ok(content_id) => Some(content_id)
+      Err(_) => None
+    }
+  } else {
+    None
   }
 }
 
@@ -1492,9 +1484,10 @@ fn decode_encoded_words(value : String) -> String raise ParseError {
 ///|
 fn find_encoded_word_end(value : String, start : Int32) -> Int32? {
   let marker = value[start:].find("?=")
-  match marker {
-    Some(offset) => Some(start + offset + 2)
-    None => None
+  if marker is Some(offset) {
+    Some(start + offset + 2)
+  } else {
+    None
   }
 }
 
