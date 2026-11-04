@@ -8,3 +8,7 @@ import {
   "moonbitlang/async/socket",
   "moonbitlang/async/tls",
 }
+
+import {
+  "moonbitlang/async/os_error",
+} for "test"
