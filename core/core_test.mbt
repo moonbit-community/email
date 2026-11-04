@@ -256,10 +256,10 @@ test "allow file-backed attachment sources without loading payloads" {
   }
   match inline {
     Binary(binary) => {
-      match binary.content_id {
-        Some(id) => assert_true(id.value == "logo")
-        None => abort("expected inline content id")
+      guard binary.content_id is Some(id) else {
+        abort("expected inline content id")
       }
+      assert_eq(id.value, "logo")
       match binary.source {
         FilePath(path) => assert_true(path == "/tmp/logo.png")
         _ => abort("expected file-backed inline asset")

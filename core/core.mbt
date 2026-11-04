@@ -528,14 +528,14 @@ fn make_binary_body(
   if filename == "" {
     return Err(EmptyFilename)
   }
-  let normalized_content_id = match content_id {
-    Some(value) =>
-      if value == "" {
-        return Err(EmptyContentId)
-      } else {
-        Some({ value, })
-      }
-    None => None
+  let normalized_content_id = if content_id is Some(value) {
+    if value == "" {
+      return Err(EmptyContentId)
+    } else {
+      Some({ value, })
+    }
+  } else {
+    None
   }
   Ok(
     Binary({
@@ -639,7 +639,7 @@ fn validate_address(address : String) -> Result[Unit, ValidationError] {
   let mut at_index = -1
   for index, c in address.iter2() {
     if c == '@' {
-      at_count = at_count + 1
+      at_count += 1
       at_index = index
     }
   }

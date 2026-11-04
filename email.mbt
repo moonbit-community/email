@@ -124,9 +124,10 @@ async fn send_composed_message(
 ) -> Result[DeliveryOutcome, ValidationError] {
   match message_result {
     Ok(message) => {
-      let envelope_result = match mail_from {
-        Some(value) => Envelope::from_message(value, message)
-        None => Envelope::from_message(message.from, message)
+      let envelope_result = if mail_from is Some(value) {
+        Envelope::from_message(value, message)
+      } else {
+        Envelope::from_message(message.from, message)
       }
       match envelope_result {
         Ok(envelope) => {
@@ -145,10 +146,7 @@ pub fn envelope_for(
   message : Message,
   mail_from? : Mailbox,
 ) -> Result[Envelope, ValidationError] {
-  let sender = match mail_from {
-    Some(value) => value
-    None => message.from
-  }
+  let sender = if mail_from is Some(value) { value } else { message.from }
   Envelope::from_message(sender, message)
 }
 
