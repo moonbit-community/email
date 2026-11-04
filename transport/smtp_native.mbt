@@ -332,7 +332,7 @@ fn SmtpTransport::close_live_connection(self : SmtpTransport) -> Unit {
       self.live_connection = None
     }
     Some(Tls(session)) => {
-      session.io.close()
+      session.close()
       self.live_connection = None
     }
     None => ()
@@ -420,8 +420,8 @@ async fn open_authenticated_connection(
           )
         })
       }
-      errdefer tls.close()
-      let session = TlsSmtpSession::{ io: tls, }
+      let session = TlsSmtpSession::{ io: tls, tcp: conn, }
+      errdefer session.close()
       let capabilities = smtp_greet_and_hello(session, config, true)
       smtp_auth(session, config.auth, capabilities, config.timeouts)
       (Tls(session), capabilities)
@@ -454,8 +454,8 @@ async fn open_authenticated_connection(
           )
         })
       }
-      errdefer tls.close()
-      let session = TlsSmtpSession::{ io: tls, }
+      let session = TlsSmtpSession::{ io: tls, tcp: conn, }
+      errdefer session.close()
       let capabilities = send_hello(
         session,
         config.hello_name,
@@ -545,6 +545,14 @@ impl SmtpSession for PlainSmtpSession with fn write_text(self, text) {
 ///|
 priv struct TlsSmtpSession {
   io : @tls.Tls
+  tcp : @socket.Tcp
+}
+
+///|
+fn TlsSmtpSession::close(self : TlsSmtpSession) -> Unit {
+  // Tls::close releases TLS resources but does not close its underlying TCP.
+  self.io.close()
+  self.tcp.close()
 }
 
 ///|
