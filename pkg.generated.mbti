@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nexacodes/email"
+package "moonbit-community/email"
 
 import {
-  "nexacodes/email/codec",
-  "nexacodes/email/core",
-  "nexacodes/email/transport",
+  "moonbit-community/email/codec",
+  "moonbit-community/email/core",
+  "moonbit-community/email/transport",
 }
 
 // Values

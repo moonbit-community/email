@@ -13,7 +13,7 @@ fn cli_command() -> @argparse.Command {
         "MoonBit QQ SMTP test",
       ]),
       OptionArg("body", about="Plain text body", default_values=[
-        "This message was sent by nexacodes/email cmd/main.",
+        "This message was sent by moonbit-community/email cmd/main.",
       ]),
       OptionArg(
         "attachment",

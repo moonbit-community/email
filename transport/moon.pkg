@@ -1,6 +1,6 @@
 import {
-  "nexacodes/email/core",
-  "nexacodes/email/codec",
+  "moonbit-community/email/core",
+  "moonbit-community/email/codec",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/async",
