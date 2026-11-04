@@ -1,4 +1,4 @@
-name = "nexacodes/email"
+name = "moonbit-community/email"
 
 version = "0.1.1"
 
@@ -8,7 +8,7 @@ import {
 
 readme = "README.mbt.md"
 
-repository = "https://github.com/nexacodes/email"
+repository = "https://github.com/moonbit-community/email"
 
 license = "Apache-2.0"
 

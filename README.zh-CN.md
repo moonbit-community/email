@@ -1,8 +1,8 @@
-# nexacodes/email
+# moonbit-community/email
 
 [English](README.mbt.md) | [简体中文](README.zh-CN.md)
 
-`nexacodes/email` 是一个面向 MoonBit 的邮件库，顶层提供了一组偏易用的 facade API，覆盖最常见的邮件场景：
+`moonbit-community/email` 是一个面向 MoonBit 的邮件库，顶层提供了一组偏易用的 facade API，覆盖最常见的邮件场景：
 
 - 组装纯文本、HTML 或 multipart 邮件
 - 生成 SMTP envelope
@@ -42,7 +42,7 @@
 如果你想走“先组装，再编码/发送”的低样板路径：
 
 ```moonbit nocheck
-// 假设你已经导入了 `nexacodes/email` 顶层 facade 包
+// 假设你已经导入了 `moonbit-community/email` 顶层 facade 包
 
 ///|
 let from = Mailbox::new("sender@example.com", Some("Sender")) |> must_ok
@@ -137,7 +137,7 @@ moon run cmd/main -- \
   --recipient someone@example.com \
   --auth-code your-auth-code \
   --subject "MoonBit email test" \
-  --body "Hello from nexacodes/email"
+  --body "Hello from moonbit-community/email"
 ```
 
 ## 当前状态

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nexacodes/email/transport"
+package "moonbit-community/email/transport"
 
 import {
+  "moonbit-community/email/core",
   "moonbitlang/core/debug",
-  "nexacodes/email/core",
 }
 
 // Values

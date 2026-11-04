@@ -1,8 +1,8 @@
-# nexacodes/email
+# moonbit-community/email
 
 [English](README.mbt.md) | [简体中文](README.zh-CN.md)
 
-`nexacodes/email` is a MoonBit email library with a small top-level facade for the common cases:
+`moonbit-community/email` is a MoonBit email library with a small top-level facade for the common cases:
 
 - compose plain text, HTML, or multipart messages
 - derive SMTP envelopes
@@ -42,7 +42,7 @@ It also re-exports the common data types you need at the call site, such as:
 For a low-ceremony compose flow:
 
 ```moonbit nocheck
-// assuming you import the `nexacodes/email` facade package
+// assuming you import the `moonbit-community/email` facade package
 
 ///|
 let from = Mailbox::new("sender@example.com", Some("Sender")) |> must_ok
@@ -140,7 +140,7 @@ moon run cmd/main -- \
   --recipient someone@example.com \
   --auth-code your-auth-code \
   --subject "MoonBit email test" \
-  --body "Hello from nexacodes/email"
+  --body "Hello from moonbit-community/email"
 ```
 
 ## Status
